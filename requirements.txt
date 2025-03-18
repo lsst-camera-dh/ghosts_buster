@@ -1,0 +1,5 @@
+batoid >= 0.8
+numpy
+pandas
+pyarrow
+matplotlib
