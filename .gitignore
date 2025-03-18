@@ -2,3 +2,5 @@
 */*.gif
 */*.png
 */*/*.png
+data/
+*.gif
