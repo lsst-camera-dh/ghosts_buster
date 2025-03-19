@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import shutil 
+import sys
 import os
 
 # Vérifier si les dossiers ../data/ et ../data/images existe, sinon les créer
