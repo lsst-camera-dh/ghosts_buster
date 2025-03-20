@@ -1,0 +1,25 @@
+[project]
+name = "lsst-ghost-buster"
+version = "0.1.0"
+description = "A package to explore ghost artefact in the LSST"
+authors = [{ name = "Dimitri Buffat", email = "dimitri.buffat@etu.univ-lyon1.fr" }]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["batoid>=0.8",
+	"numpy",
+	"pandas",
+	"pyarrow",
+	"matplotlib"]
+classifiers=[
+        "Development Status :: 1 - Beta",
+        "License :: OSI Approved :: GPL License",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        ]
+dynamic = []
+
+[tool.setuptools]
+package-dir = {"" = "src"}  # Indique que le package est dans `src/`
+packages = ["ghost_buster"]  # Spécifie le package à inclure
