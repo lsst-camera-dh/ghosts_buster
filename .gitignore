@@ -1,8 +1,9 @@
 # Specific file and direcory of the project
-*/*.csv
-*/*.gif
-*/*.png
-*/*/*.png
+*.csv
+*.ecsv
+*.gif
+*.png
+*.png
 data/
 *.gif
 
