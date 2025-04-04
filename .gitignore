@@ -1,6 +1,7 @@
 # Specific file and direcory of the project
 *.csv
 *.ecsv
+*.fits
 *.gif
 *.png
 *.png
