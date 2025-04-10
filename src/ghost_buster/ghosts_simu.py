@@ -1,7 +1,7 @@
 import pyplot as plt
 import numpy as np
 import batoid
-from . import sources_image as si
+from sources_image import getCoordBatoid
 
 version = "0.1"
 
@@ -114,7 +114,7 @@ def initParams(image, metadata, nrad=300, naz=900, maxflux=1.0, minflux=1e-5):
         initial data for Batoid's calculus
 
     '''
-    theta_x, theta_y = si.getCoordBatoid(image)
+    theta_x, theta_y = getCoordBatoid(image)
     init_simu = [(theta_x, theta_y, nrad, naz, maxflux, minflux)]
     theta = np.radians(metadata["ROTPA"])
     init_simu = rotBeforeBatoid(init_simu, theta)

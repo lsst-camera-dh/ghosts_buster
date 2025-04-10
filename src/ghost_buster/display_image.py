@@ -2,7 +2,7 @@ import pylab as plt
 import numpy as np
 import lsst.afw.display as afwDisplay
 from astropy.stats import sigma_clipped_stats
-from . import sources_image as si
+from sources_image import statsImage
 
 version = "0.1"
 

@@ -38,3 +38,14 @@ logs/
 *.log
 .cache/
 
+# Dossiers Sphinx
+/docs/build/
+/docs/source/modules.rst
+/docs/source/*.pyc
+/docs/source/*.pyo
+
+# Fichiers Sphinx compilés
+*.html
+*.doctree
+*.pickle
+
