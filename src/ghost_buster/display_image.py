@@ -1,6 +1,10 @@
 import pylab as plt
-import lsst.afw.image as afwimage
+import numpy as np
 import lsst.afw.display as afwDisplay
+from astropy.stats import sigma_clipped_stats
+from . import sources_image as si
+
+version = "0.1"
 
 def displayImage(image,title=None):
     afwDisplay.setDefaultBackend('matplotlib') 
@@ -33,7 +37,7 @@ def displayImageGhostsBW(image, title=None):
     afw_display = afwDisplay.Display(1)
     afw_display.scale('asinh', 'zscale')
     afw_display.setImageColormap(cmap='grey')
-    afw_display.mtv(ghost_292)
+    afw_display.mtv(image)
     plt.gca().axis('off')
     plt.show()
     return afw_display
@@ -44,7 +48,7 @@ def displayImageGhostsBW(image, title=None):
 
 def displayImageGhostsFlux(image, minflux=955, maxflux=990):
     flux_mask = (image >= minflux) & (image <= maxflux)
-    pixels_in_range = data_ghost[flux_mask]
+    pixels_in_range = image[flux_mask]
     masked_data = np.where(flux_mask, image, 0.0)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
     im = ax.imshow(masked_data, origin='lower', vmin=minflux, vmax=maxflux)
@@ -55,7 +59,6 @@ def displayImageGhostsFlux(image, minflux=955, maxflux=990):
 
 def displayReal(image):
     mean, median, std = sigma_clipped_stats(image, sigma=3.0)
-    
     fig = plt.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
     plt.title("Image originale")
     plt.xticks([])
@@ -98,7 +101,7 @@ def displayFit(image, hist, x , y, clean):
     mean, median, std = sigma_clipped_stats(image, sigma=3.0)
 
     plt.subplot(1, 3, 1)
-    plt.imshow(data_ghost, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    plt.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
     plt.title("Image originale")
     plt.xticks([])
     plt.yticks([])
@@ -136,3 +139,33 @@ def displayFit(image, hist, x , y, clean):
     #plt.savefig('real.png', bbox_inches='tight')
     #plt.close()
     plt.show()
+
+def displayRemoveSources(image, image_ghosts):
+    '''
+
+    Parameters
+    ----------
+    image : np.array
+        image.fits.getArray()
+        Bin's values
+    image_ghosts : np.array
+        image without brightness sources
+        Bin's values
+
+    Returns
+    -------
+    fig : plt.fig
+        subplot of the both images
+
+    '''
+    mean, median, std = si.statsImage(image)
+    fig = plt.figure(figsize=(16, 16))
+    plt.subplot(1, 2, 1)
+    plt.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    plt.title("Image originale")
+    plt.subplot(1, 2, 2)
+    plt.imshow(image_ghosts, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    plt.title("Image sans sources (ghosts potentiels)")
+    plt.tight_layout()
+    plt.show()
+    return fig
