@@ -6,7 +6,7 @@
 *.png
 *.png
 data/
-*.gif
+notebooks/comcam_ghosts/
 
 # File and direcory Python
 __pycache__/
