@@ -1,7 +1,7 @@
-import pyplot as plt
+import pylab as plt
 import numpy as np
 import batoid
-from sources_image import getCoordBatoid
+from .sources_image import getCoordBatoid
 
 version = "0.1"
 
@@ -243,23 +243,3 @@ def getSimuImage(px, py, x, y, flux):
     H, xedges, yedges = np.histogram2d(x, y, bins=[px, py], weights=flux)
 
     return H.T, xedges, yedges
-    
-    fig, ax = plt.subplots(figsize=(8, 8))
-    X, Y = np.meshgrid(xedges, yedges)
-    ax.pcolormesh(X, Y, H.T, vmax=4e-2, norm='log')
-    
-    for xi in x_grid:
-        ax.plot([xi, xi], [y_min, y_max], c="r")
-    for yi in y_grid:
-        ax.plot([x_min, x_max], [yi, yi], c="r")
-    
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
-    ax.set_aspect("equal")
-    ax.set_facecolor('black')
-    plt.xticks([])
-    plt.yticks([])
-    #plt.savefig('simu.png', bbox_inches='tight')
-    #plt.close()
-    plt.show()
-    return fig

@@ -1,5 +1,5 @@
 import numpy as np
-import pyplot as plt
+import pylab as plt
 from astropy.stats import sigma_clipped_stats
 from scipy.optimize import curve_fit
 
@@ -134,6 +134,7 @@ def applyFit(image, hist):
         Try to remove ghosts on image by the fit
 
     '''
+    image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
     a, b = getFit(image, hist)
     ghosts = modelghosts(hist, a)
     clean = image - ghosts
