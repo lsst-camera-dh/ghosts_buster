@@ -85,7 +85,7 @@ def initTelescope():
     
     return telescope
 
-def initParams(image, metadata, nrad=300, naz=900, maxflux=1.0, minflux=1e-5):
+def initParams(image, metadata, nrad=300, naz=900, maxflux=1.0, minflux=1e-4):
     '''
 
     Parameters

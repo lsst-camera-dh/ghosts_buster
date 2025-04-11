@@ -109,10 +109,12 @@ def getFit(image, hist):
         Best parameters find by the fit
 
     '''
+    image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
+    hist = np.nan_to_num(hist, nan=0.0, posinf=0.0, neginf=0.0)
     y_data = image.flatten()
     x_data = hist.flatten()
 
-    params, cov = curve_fit(modelfit, x_data, y_data)
+    params, cov = curve_fit(modelfit, x_data, y_data, bounds=[(0.0, 900.027),(np.inf, 1000)])
     
     print(f"Best fit: a = {params[0]:.3f}, b = {params[1]:.3f}")
     return params
@@ -135,7 +137,35 @@ def applyFit(image, hist):
 
     '''
     image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
+    hist = np.nan_to_num(hist, nan=0.0, posinf=0.0, neginf=0.0)
     a, b = getFit(image, hist)
     ghosts = modelghosts(hist, a)
     clean = image - ghosts
     return clean
+
+def applyFit2(image, hist, a):
+    '''
+
+    Parameters
+    ----------
+    image : np.array
+        image.fits.getArray()
+        Bin's values
+    hist : np.array
+        Simulated bins values
+
+    Returns
+    -------
+    clean : np.array
+        Try to remove ghosts on image by the fit
+
+    '''
+    image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
+    hist = np.nan_to_num(hist, nan=0.0, posinf=0.0, neginf=0.0)
+    ghosts = modelghosts(hist, a)
+    clean = image - ghosts
+    return clean
+
+def applyGrid(image, hist):
+    hist[np.isnan(image)] = np.nan
+    return hist

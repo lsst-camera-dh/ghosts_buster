@@ -76,14 +76,14 @@ def displaySimu(hist, x, y):
     fig, ax = plt.subplots(figsize=(8, 8))
     
     im = ax.pcolormesh(X, Y, hist, vmax=4e-2, norm='log')
-    
+    '''
     for xi in x_grid:
         ax.plot([xi, xi], [y_min, y_max], c="r")
     for yi in y_grid:
         ax.plot([x_min, x_max], [yi, yi], c="r")
-    
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
+    '''
+    #ax.set_xlim(x_min, x_max)
+    #ax.set_ylim(y_min, y_max)
     ax.set_aspect("equal")
     ax.set_facecolor('black')
     plt.xticks([])
@@ -113,14 +113,14 @@ def displayFit(image, hist, x, y, clean):
     X, Y = np.meshgrid(x, y)
 
     pcm = ax.pcolormesh(X, Y, hist, vmax=4e-2, shading='auto', norm='log')
-    
+    '''
     for xi in x_grid:
         ax.plot([xi, xi], [y_min, y_max], c="r")
     for yi in y_grid:
         ax.plot([x_min, x_max], [yi, yi], c="r")
-
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
+    '''
+    #ax.set_xlim(x_min, x_max)
+    #ax.set_ylim(y_min, y_max)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
@@ -128,6 +128,7 @@ def displayFit(image, hist, x, y, clean):
 
     mean, median, std = sigma_clipped_stats(clean, sigma=3.0)
     ax = axes[2]
+    ax.set_facecolor('white')
     ax.imshow(clean, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
     ax.set_title("Image nettoyée")
     ax.set_xticks([])
@@ -162,5 +163,20 @@ def displayRemoveSources(image, image_ghosts):
     plt.subplot(1, 2, 2)
     plt.imshow(image_ghosts, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
     plt.title("Image sans sources (ghosts potentiels)")
+    plt.tight_layout()
+    plt.show()
+
+def displayRemoveSourcesBoth(image, image_ghosts):
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+    axes[0].imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    axes[0].set_title("Image originale")
+    axes[0].set_xticks([])
+    axes[0].set_yticks([])
+    axes[1].imshow(image_ghosts, origin='lower', vmax=4e-2, norm='log')
+    axes[1].set_title("Image sans sources (ghosts potentiels)")
+    axes[1].set_facecolor('black')
+    axes[1].set_xticks([])
+    axes[1].set_yticks([])
     plt.tight_layout()
     plt.show()
