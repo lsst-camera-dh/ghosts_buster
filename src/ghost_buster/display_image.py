@@ -93,17 +93,18 @@ def displaySimu(hist, x, y):
     plt.show()
 
 def displayFit(image, hist, x, y, clean):
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
     mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+    ax = axes[0]
+    ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Image originale")
+    ax.set_xticks([])
+    ax.set_yticks([])
 
-    plt.subplot(1, 3, 1)
-    plt.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
-    plt.title("Image originale")
-    plt.xticks([])
-    plt.yticks([])
+    ax = axes[1]
+    ax.set_facecolor('black')
 
-    fig = plt.gcf()
-    ax = fig.add_subplot(1, 3, 2, facecolor='black')
-    
     CCD_DX = 43.333 / 1000.
     x_min, x_max, dx = -CCD_DX * 1.5, CCD_DX * 1.5, CCD_DX
     y_min, y_max, dy = -CCD_DX * 1.5, CCD_DX * 1.5, CCD_DX
@@ -111,8 +112,8 @@ def displayFit(image, hist, x, y, clean):
     y_grid = np.arange(y_min, y_max + dy, dy)
     X, Y = np.meshgrid(x, y)
 
-    im = ax.pcolormesh(X, Y, hist, vmax=4e-2, shading='auto', norm='log')
-
+    pcm = ax.pcolormesh(X, Y, hist, vmax=4e-2, shading='auto', norm='log')
+    
     for xi in x_grid:
         ax.plot([xi, xi], [y_min, y_max], c="r")
     for yi in y_grid:
@@ -121,17 +122,16 @@ def displayFit(image, hist, x, y, clean):
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     ax.set_aspect("equal")
-    ax.set_facecolor('black')
     ax.set_xticks([])
     ax.set_yticks([])
+    ax.set_title("Histogramme 2D")
 
     mean, median, std = sigma_clipped_stats(clean, sigma=3.0)
-
-    plt.subplot(1, 3, 3)
-    plt.imshow(clean, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
-    plt.title("Image nettoyée")
-    plt.xticks([])
-    plt.yticks([])
+    ax = axes[2]
+    ax.imshow(clean, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Image nettoyée")
+    ax.set_xticks([])
+    ax.set_yticks([])
 
     plt.tight_layout()
     plt.show()
