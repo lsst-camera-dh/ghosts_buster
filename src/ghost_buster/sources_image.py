@@ -101,6 +101,27 @@ def removeSourcesBoth(image, hist):
     hist = np.where(source_mask, 0.0, hist)
     return image, hist
 
+def extractSources(image):
+    '''
+    Parameters
+    ----------
+    image : np.array
+        image.fits.getArray()
+        Bin's values
+
+    Returns
+    -------
+    sources_only : np.array
+        image with only brightness sources
+        Bin's values
+    '''
+    smoothed, mean, median, std = statsSmoothImage(image)
+    threshold = median + 3.0 * std
+    segm = detect_sources(smoothed, threshold=threshold, npixels=5)
+    source_mask = segm.make_source_mask()
+    sources_only = np.where(source_mask, image, 0.0)
+    return sources_only
+
 def getCatalog(image):
     '''
 
@@ -143,6 +164,7 @@ def getBrightnessCoord(catalog):
     brightest_src = catalog[idx_max]
     x_star = brightest_src.xcentroid
     y_star = brightest_src.ycentroid
+    # x_star, y_star = 304.0282151518103, 733.3845556158473 # Test with new origin, Gaia and Wcs LSST
     print(f"Coordonnées de l’étoile la plus brillante : x = {x_star:.2f}, y = {y_star:.2f}")
     return x_star, y_star
 
@@ -168,9 +190,11 @@ def getCoordBatoid(image, bins=8):
     '''
     ny, nx = image.shape
     x0, y0 = nx / 2, ny / 2
-    scale = 0.2
+    scale = 0.2003375
     catalog = getCatalog(image)
     x_star, y_star = getBrightnessCoord(catalog)
+    # x_star = np.array([303.42590378617035, -129.52970241622484])
+    # y_star = np.array([733.5446069859133, 730.8892532436698]) # Meilleur coordonnées trouver sur Gaia
     dx = (x_star - x0) * scale * bins
     dy = (y_star - y0) * scale * bins
     theta_x = dx / 3600

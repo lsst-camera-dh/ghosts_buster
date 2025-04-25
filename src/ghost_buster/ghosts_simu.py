@@ -1,6 +1,7 @@
 import pylab as plt
 import numpy as np
 import batoid
+from scipy.ndimage import gaussian_filter
 from .sources_image import getCoordBatoid
 
 version = "0.1"
@@ -56,7 +57,7 @@ def rotAfterBatoid(x, y, metadata):
         y coordinates of rays in Telescope referentiel
 
     '''
-    theta = np.radians(-metadata["ROTPA"])
+    theta = np.deg2rad(-metadata["ROTPA"]) # Changer angle
     x_prime = x*np.cos(theta) - y*np.sin(theta)
     y_prime = x*np.sin(theta) + y*np.cos(theta)
     return x_prime, y_prime
@@ -74,18 +75,24 @@ def initTelescope():
 
     for surface in telescope.itemDict.values():
             if isinstance(surface, batoid.RefractiveInterface):
-                if surface.name.split('_')[0] in ['L1', 'L2', 'L3']:
-                    surface.forwardCoating = batoid.SimpleCoating(0.05, 0.95)
-                    surface.reverseCoating = batoid.SimpleCoating(0.05, 0.95)
+                if surface.name.split('_')[0] in ['L1']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-0.9525945248652419, 0.9525945248652419)
+                    surface.reverseCoating = batoid.SimpleCoating(1-0.9525945248652419, 0.9525945248652419)
+                elif surface.name.split('_')[0] in ['L2']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-0.9486521132432222, 0.9486521132432222)
+                    surface.reverseCoating = batoid.SimpleCoating(1-0.9486521132432222, 0.9486521132432222)
+                elif surface.name.split('_')[0] in ['L3']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-0.9535605093540551, 0.9535605093540551)
+                    surface.reverseCoating = batoid.SimpleCoating(1-0.9535605093540551, 0.9535605093540551)
                 elif surface.name.split('_')[0] in ['Filter']:
-                    surface.forwardCoating = batoid.SimpleCoating(0.05, 0.95)
-                    surface.reverseCoating = batoid.SimpleCoating(0.05, 0.95)
+                    surface.forwardCoating = batoid.SimpleCoating(1-0.9529014593685005, 0.9529014593685005)
+                    surface.reverseCoating = batoid.SimpleCoating(1-0.9529014593685005, 0.9529014593685005)
             if isinstance(surface, batoid.Detector):
-                surface.forwardCoating = batoid.SimpleCoating(0.15, 0.85)
+                surface.forwardCoating = batoid.SimpleCoating(1-0.9018076800000383, 0.9018076800000383)
     
     return telescope
 
-def initParams(image, metadata, nrad=300, naz=900, maxflux=1.0, minflux=1e-4):
+def initParams(image, metadata, bins=8, nrad=300, naz=900, maxflux=1.0, minflux=1e-4):
     '''
 
     Parameters
@@ -114,9 +121,9 @@ def initParams(image, metadata, nrad=300, naz=900, maxflux=1.0, minflux=1e-4):
         initial data for Batoid's calculus
 
     '''
-    theta_x, theta_y = getCoordBatoid(image)
+    theta_x, theta_y = getCoordBatoid(image, bins=bins)
     init_simu = [(theta_x, theta_y, nrad, naz, maxflux, minflux)]
-    theta = np.radians(metadata["ROTPA"])
+    theta = np.deg2rad(metadata["ROTPA"]) # Changer angle
     init_simu = rotBeforeBatoid(init_simu, theta)
     return init_simu
 
@@ -201,7 +208,7 @@ def groupData(x, y, flux):
     flux = np.concatenate([iflux for iflux in flux])
     return x, y, flux
 
-def getSimuImage(px, py, x, y, flux):
+def getSimuImage(px, py, x, y, flux, binning):
     '''
     
     Parameters
@@ -224,15 +231,12 @@ def getSimuImage(px, py, x, y, flux):
 
     '''
     # On suppose que x_prime, y_prime et flux sont des arrays 1D avec les positions et le flux associé
-    
-    CCD_DX = 43.333/1000.
 
-    x_min, x_max, dx = -CCD_DX*1.5, CCD_DX*1.5, CCD_DX
-    y_min, y_max, dy = -CCD_DX*1.5, CCD_DX*1.5, CCD_DX
+    scale = binning*1e-5
+    X, Y = px*scale, py*scale
     
-    x_grid = np.arange(x_min, x_max + dx, dx)
-    y_grid = np.arange(y_min, y_max + dy, dy)
-    
+    x_min, x_max = -X/2.0, X/2.0
+    y_min, y_max = -Y/2.0, Y/2.0
     
     mask = (x > x_min) & (x < x_max) & (y > y_min) & (y < y_max)
     
@@ -243,3 +247,27 @@ def getSimuImage(px, py, x, y, flux):
     H, xedges, yedges = np.histogram2d(x, y, bins=[px, py], weights=flux)
 
     return H.T, xedges, yedges
+
+def getSmoothSimu(simu, sigma=1.0):
+    simu = np.nan_to_num(simu, nan=0.0, posinf=0.0, neginf=0.0)
+    smoothed = gaussian_filter(simu, sigma=sigma)
+    return smoothed
+
+def getNoiseSimu(image, mu, sigma):
+    # Taille de l'image simulée
+    nx, ny = image.shape[1], image.shape[0]
+    
+    # Génération d'une "image" de bruit 2D
+    image_bruit = np.random.normal(loc=mu, scale=sigma, size=(nx, ny))
+    
+    return image_bruit.T
+
+def showNoiseSimu(image, mu, sigma):
+    image_bruit = getNoiseSimu(image=image, mu=mu, sigma=sigma)
+
+    plt.imshow(image_bruit, origin='lower', cmap='viridis', aspect='auto')
+    plt.colorbar(label='Valeur du pixel')
+    plt.title("Image simulée - Bruit gaussien")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.show()
