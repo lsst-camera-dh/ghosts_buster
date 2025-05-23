@@ -189,23 +189,42 @@ def showNoise2(image, x=[(1100, 1400)], y=[(100, 400)], sigma=10.0, name=None):
 
     params, cov = curve_fit(double_gaussian, bin_centers, hist_vals, p0=p0)
 
-    print("\n--- Paramètres du fit double gaussienne ---")
-    print(f"Gaussienne 1 (noise) :")
-    print(f"  Amplitude   = {params[0]:.3f}")
-    print(f"  Moyenne     = {params[1]:.3f}")
-    print(f"  Sigma       = {params[2]:.3f}")
-    
-    print(f"\nGaussienne 2 (ghosts) :")
-    print(f"  Amplitude   = {params[3]:.3f}")
-    print(f"  Moyenne     = {params[4]:.3f}")
-    print(f"  Sigma       = {params[5]:.3f}")
+    if params[1] < params[4]:
+        print("\n--- Paramètres du fit double gaussienne ---")
+        print(f"Gaussienne 1 (noise) :")
+        print(f"  Amplitude   = {params[0]:.3f}")
+        print(f"  Moyenne     = {params[1]:.3f}")
+        print(f"  Sigma       = {params[2]:.3f}")
+        
+        print(f"\nGaussienne 2 (ghosts) :")
+        print(f"  Amplitude   = {params[3]:.3f}")
+        print(f"  Moyenne     = {params[4]:.3f}")
+        print(f"  Sigma       = {params[5]:.3f}")
+
+    else:
+        print("\n--- Paramètres du fit double gaussienne ---")
+        print(f"Gaussienne 1 (noise) :")
+        print(f"  Amplitude   = {params[3]:.3f}")
+        print(f"  Moyenne     = {params[4]:.3f}")
+        print(f"  Sigma       = {params[5]:.3f}")
+        
+        print(f"\nGaussienne 2 (ghosts) :")
+        print(f"  Amplitude   = {params[0]:.3f}")
+        print(f"  Moyenne     = {params[1]:.3f}")
+        print(f"  Sigma       = {params[2]:.3f}")
 
     x_fit = np.linspace(bin_centers.min(), bin_centers.max(), 1000)
     y_fit = double_gaussian2(x_fit, *params)
     
     plt.hist(x_hist, bins=100, density=True, alpha=0.6, label='Histogramme')
-    plt.plot(x_fit, y_fit[0], 'r-', label='Fit gaussienne Noise')
-    plt.plot(x_fit, y_fit[1], 'g-', label='Fit gaussienne Ghosts')
+
+    if params[1] < params[4]:
+        plt.plot(x_fit, y_fit[0], 'g-', label='Fit gaussienne Noise')
+        plt.plot(x_fit, y_fit[1], 'r-', label='Fit gaussienne Ghosts')
+    else:
+        plt.plot(x_fit, y_fit[1], 'g-', label='Fit gaussienne Noise')
+        plt.plot(x_fit, y_fit[0], 'r-', label='Fit gaussienne Ghosts')
+        
     plt.plot(x_fit, double_gaussian(x_fit, *params), 'b-', label='Fit1 + Fit2')
     plt.legend()
     
@@ -375,12 +394,43 @@ def testMinuit(image, hist):
     m.migrad()
     m.hesse()
 
-    print("Amplitude optimale :", m.values['amp'])
-    print("Offset optimal     :", m.values['offset'])
-    print("Erreur sur amp     :", m.errors['amp'])
-    print("Erreur sur offset     :", m.errors['offset'])
+    # print("Amplitude optimale :", m.values['amp'])
+    # print("Offset optimal     :", m.values['offset'])
+    # print("Erreur sur amp     :", m.errors['amp'])
+    # print("Erreur sur offset     :", m.errors['offset'])
     
     model_fit = m.values['amp'] * hist + m.values['offset']
+
+    return image - model_fit, m
+
+def testMinuitBis(image, hist):
+    image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
+    hist = np.nan_to_num(hist, nan=0.0, posinf=0.0, neginf=0.0)
+
+    sigma_val = getNoise(image)[1]
+    sigma = np.ones_like(image) * sigma_val
+
+    image_fit, hist_fit = removeSourcesBoth(image, hist)
+
+    image_flat = image_fit.ravel()
+    hist_flat = hist_fit.ravel()
+    sigma_flat = sigma.ravel()
+
+    def chi2(amp):
+        model = amp * hist_flat + 955.241
+        return np.sum(((image_flat - model) / sigma_flat) ** 2)
+
+    m = Minuit(chi2, amp=300.0)
+    m.errordef = Minuit.LEAST_SQUARES
+    m.migrad()
+    m.hesse()
+
+    # print("Amplitude optimale :", m.values['amp'])
+    # print("Offset optimal     :", m.values['offset'])
+    # print("Erreur sur amp     :", m.errors['amp'])
+    # print("Erreur sur offset     :", m.errors['offset'])
+    
+    model_fit = m.values['amp'] * hist + 955.241
 
     return image - model_fit, m
 
@@ -524,5 +574,39 @@ def testMinuit3(image, simu, noise, sigma=5.0):
     print("Erreur sur amp     :", m.errors['amp'])
     
     model_fit = m.values['amp'] * simu
+
+    return image - model_fit, m
+
+def testMinuitAiry(image, hist, temp):
+    image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
+    hist = np.nan_to_num(hist, nan=0.0, posinf=0.0, neginf=0.0)
+    temp = np.nan_to_num(temp, nan=0.0, posinf=0.0, neginf=0.0)
+    
+    sigma_val = getNoise(image)[1]
+    sigma = np.ones_like(image) * sigma_val
+
+    image_fit, hist_fit = removeSourcesBoth(image, hist)
+    _, temp_fit = removeSourcesBoth(image, temp)
+
+    image_flat = image_fit.ravel()
+    hist_flat = hist_fit.ravel()
+    temp_flat = temp_fit.ravel()
+    sigma_flat = sigma.ravel()
+
+    def chi2(AmpG, AmpA):
+        model = AmpG * hist_flat + AmpA * temp_flat + 955.241
+        return np.sum(((image_flat - model) / sigma_flat) ** 2)
+
+    m = Minuit(chi2, AmpG=300.0, AmpA=100.0)
+    m.errordef = Minuit.LEAST_SQUARES
+    m.migrad()
+    m.hesse()
+
+    # print("Amplitude optimale :", m.values['amp'])
+    # print("Offset optimal     :", m.values['offset'])
+    # print("Erreur sur amp     :", m.errors['amp'])
+    # print("Erreur sur offset     :", m.errors['offset'])
+    
+    model_fit = m.values['AmpG'] * hist + m.values['AmpA'] * temp + 955.241
 
     return image - model_fit, m

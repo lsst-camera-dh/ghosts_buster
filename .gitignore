@@ -4,8 +4,6 @@
 *.fits
 *.gif
 *.png
-*.png
-data/
 notebooks/comcam_ghosts/
 
 # File and direcory Python

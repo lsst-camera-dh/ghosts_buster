@@ -164,8 +164,10 @@ def getBrightnessCoord(catalog):
     brightest_src = catalog[idx_max]
     x_star = brightest_src.xcentroid
     y_star = brightest_src.ycentroid
-    # x_star, y_star = 304.0282151518103, 733.3845556158473 # Test with new origin, Gaia and Wcs LSST
     print(f"Coordonnées de l’étoile la plus brillante : x = {x_star:.2f}, y = {y_star:.2f}")
+    x_test, y_test = 1586.0, 1577.0
+    x_star = x_test - 497.1411357465662
+    y_star = y_test - 10.980958147380676
     return x_star, y_star
 
 def getCoordBatoid(image, bins=8):
@@ -193,8 +195,6 @@ def getCoordBatoid(image, bins=8):
     scale = 0.2003375
     catalog = getCatalog(image)
     x_star, y_star = getBrightnessCoord(catalog)
-    # x_star = np.array([303.42590378617035, -129.52970241622484])
-    # y_star = np.array([733.5446069859133, 730.8892532436698]) # Meilleur coordonnées trouver sur Gaia
     dx = (x_star - x0) * scale * bins
     dy = (y_star - y0) * scale * bins
     theta_x = dx / 3600

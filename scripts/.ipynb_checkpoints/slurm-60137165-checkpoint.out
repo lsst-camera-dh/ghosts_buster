@@ -1,0 +1,30 @@
+**********************************************************************
+*                         SLURM Batch System                         *
+*              IN2P3 Computing Centre, Villeurbanne FR               *
+**********************************************************************
+* Date:                 Fri May 16 02:33:02 PM CEST 2025
+* Job name:             fitrot.sh
+* Job id:               60137165
+* User:                 dbuffat
+* Account:              lsst
+* Submit host:          cca020
+* Partition:            lsst
+* Quality of service:   normal
+* Nodelist:             ccwslurm2005
+* Operating System:     Red Hat Enterprise Linux release 9.5 (Plow)
+* Architecture:         x86_64
+**********************************************************************
+WARNING: /cvmfs/sw.lsst.eu/almalinux-x86_64/lsst_distrib/w_2025_18/conda/etc/profile.d/mamba.sh (the file emitting this warning) is deprecated.
+WARNING: This file will be removed on the next release after 30th September 2025.
+WARNING: Please use 'mamba shell init' to get the correct initialization for your shell.
+WARNING: The MAMBA_ROOT_PREFIX environment variable is not set.
+WARNING: This is required for mamba to work correctly as of 2.0.
+WARNING: 
+WARNING: For now, we are setting 'MAMBA_ROOT_PREFIX' to '/cvmfs/sw.lsst.eu/almalinux-x86_64/lsst_distrib/w_2025_18/conda'.
+WARNING: 
+WARNING: Please make sure this is consistent with your installation or alternatively (by order of preference):
+WARNING:   - rerun 'mamba shell init' to initialize mamba for your current shell
+WARNING:   - manually set 'MAMBA_ROOT_PREFIX' to the root of your installation in your shell profile script.
+WARNING:   - use the '-r,--root-prefix' CLI option when calling mamba.
+WARNING: 
+WARNING: This message originates from /cvmfs/sw.lsst.eu/almalinux-x86_64/lsst_distrib/w_2025_18/conda/etc/profile.d/mamba.sh

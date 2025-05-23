@@ -67,8 +67,23 @@ def displayReal(image, name=None):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
     im = ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
     plt.title("Original image")
-    plt.xticks([])
-    plt.yticks([])
+
+    if name != None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+
+def displaySub(image, name=None, starpos=None):
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+    im = ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+
+    if starpos != None:
+        #th = np.linspace(0, 2*np.pi, 1000)
+        #ax.plot(starpos[0]-185 + 43*np.cos(th), starpos[1]-140 + 43*np.sin(th), c='r')
+        #ax.plot(starpos[0]-185 + 90*np.cos(th), starpos[1]-140 + 90*np.sin(th), c='g')
+        ax.plot(starpos[0]-185, starpos[1]-140, '+', c='r')
+    plt.title("Subimage")
+
     if name != None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()
@@ -86,7 +101,7 @@ def displaySimu(hist, x, y, name=None):
     
     fig, ax = plt.subplots(figsize=(8, 8))
     
-    im = ax.pcolormesh(X, Y, hist, vmax=4e-2, norm='log')
+    im = ax.pcolormesh(X, Y, hist, vmax=4e-2)
     '''
     for xi in x_grid:
         ax.plot([xi, xi], [y_min, y_max], c="r")
@@ -148,6 +163,38 @@ def displayFit(image, hist, x, y, clean, name=None):
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title("Histogram 2D")
+
+    mean, median, std = sigma_clipped_stats(clean, sigma=3.0)
+    ax = axes[2]
+    ax.set_facecolor('white')
+    ax.imshow(clean, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Clean image")
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    plt.tight_layout()
+    if name != None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+
+def displayFit2(image, temp, clean, name=None):
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+    ax = axes[0]
+    ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Original image")
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    mean, median, std = sigma_clipped_stats(temp, sigma=3.0)
+    ax = axes[1]
+    ax.set_facecolor('black')
+    ax.imshow(temp, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_title("Template")
 
     mean, median, std = sigma_clipped_stats(clean, sigma=3.0)
     ax = axes[2]
@@ -240,5 +287,33 @@ def displaySourcesAndGhosts(image, name=None):
     plt.title("Image of potential ghosts")
     plt.tight_layout()
     if name != None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+
+def displayCut(image, xpos, ypos, name=None):
+    fig = plt.figure(figsize=(16, 6))
+
+    # Coupe en x (ligne à ypos)
+    plt.subplot(1, 2, 1)
+    x = image[:, int(xpos)]
+    x_idx = np.arange(len(x))
+    plt.bar(x_idx, x, width=1.0)
+    plt.xlabel("Pixels along y axis")
+    plt.ylabel("Bin value")
+    plt.ylim(-1000, 3000)
+    plt.title(f"Cut at x = {xpos}")
+
+    # Coupe en y (colonne à xpos)
+    plt.subplot(1, 2, 2)
+    y = image[int(ypos), :]
+    y_idx = np.arange(len(y))
+    plt.bar(y_idx, y, width=1.0)
+    plt.xlabel("Pixels along x axis")
+    plt.ylabel("Bin value")
+    plt.ylim(-1000, 3000)
+    plt.title(f"Cut at y = {ypos}")
+
+    plt.tight_layout()
+    if name is not None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# SLURM options:
+
+#SBATCH --job-name=poly_simu_batoid    # Nom du job
+#SBATCH --output=poly_simu_batoid_%j.log   # Standard output et error log
+
+#SBATCH --partition=htc               # Choix de partition (htc par défaut)
+
+#SBATCH --ntasks=1                    # Exécuter une seule tâche
+#SBATCH --mem=60000                  # Mémoire en MB par défaut
+#SBATCH --time=1-00:00:00             # Délai max = 7 jours
+
+#SBATCH --mail-user=dimitri.buffat@etu.univ-lyon1.fr         # Où envoyer l'e-mail
+#SBATCH --mail-type=END,FAIL          # Événements déclencheurs (NONE, BEGIN, END, FAIL, ALL)
+
+#SBATCH --licenses=sps                # Déclaration des ressources de stockage et/ou logicielles
+
+# Commandes à soumettre :
+
+export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+export PYTHONPATH=$HOME/lsst/src:$PYTHONPATH
+
+# Lancer le script Python
+python3 $HOME/lsst/scripts/polychrom.py
