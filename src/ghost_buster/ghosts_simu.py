@@ -1,24 +1,52 @@
 import pylab as plt
 import numpy as np
+import pandas as pd
 import batoid
 import math
-from scipy.ndimage import gaussian_filter
 from scipy.special import j1
 from scipy.ndimage import rotate
 from scipy.signal import fftconvolve
-from .sources_image import getCoordBatoid
 
-version = "0.1"
+version = "0.2"
 
-def rotBeforeBatoid(data, theta):
+def pixeltotheta(dimension, starpos, binning):
+    '''
+
+    Parameters
+    ----------
+    dimension : tuple
+        data.shape for the changement of coordinates.
+    starpos : tuple
+        (xstar, ystar), position of the star.
+    binning : int
+        Binng of the data.
+
+    Returns
+    -------
+    theta_x : float
+        theta_x value for Batoid.
+    theta_y : float
+        theta_y value for Batoid.
+
+    '''
+    ny, nx = dimension
+    x0, y0 = nx / 2, ny / 2
+    scale = 0.2
+    dx = (starpos[0] - x0) * scale * binning
+    dy = (starpos[1] - y0) * scale * binning
+    theta_x = dx / 3600
+    theta_y = dy / 3600
+    return theta_x, theta_y
+
+def rotBeforeBatoid(data, rot):
     '''
 
     Parameters
     ----------
     data : list
         initial data for Batoid's calculus
-    theta : float
-        angle of the telescope with sky
+    rot : float
+        angle of the telescope with sky in degrees
 
     Returns
     -------
@@ -27,6 +55,7 @@ def rotBeforeBatoid(data, theta):
 
     '''
     x_prime, y_prime = [], []
+    theta = np.deg2rad(rot)
     
     for point in data:
         x = point[0]
@@ -37,7 +66,7 @@ def rotBeforeBatoid(data, theta):
         y_prime.append(y_rot)
         
     for i in range(len(data)):
-        data[i] = (x_prime[i], y_prime[i], data[i][2], data[i][3], data[i][4], data[i][5])
+        data[i] = (x_prime[i], y_prime[i], data[i][2], data[i][3], data[i][4])
         
     return data
 
@@ -50,9 +79,9 @@ def rotAfterBatoid(x, y, rot):
         x coordinates of rays in Batoid referentiel
     y : np.array
         y coordinates of rays in Batoid referentiel
-    metadata : dict
-        meta-data of the image
-
+    rot : float
+        angle of the telescope with sky in degrees
+        
     Returns
     -------
     x_prime : np.array
@@ -61,117 +90,224 @@ def rotAfterBatoid(x, y, rot):
         y coordinates of rays in Telescope referentiel
 
     '''
-    theta = np.deg2rad(-rot) # Changer angle
+    theta = np.deg2rad(-rot)
     x_prime = x*np.cos(theta) - y*np.sin(theta)
     y_prime = x*np.sin(theta) + y*np.cos(theta)
     return x_prime, y_prime
 
-def initTelescope():
-    '''
-
-    Returns
-    -------
-    telescope : batoid.Optic
-        Construct telescope for Batoid's simulation
-
-    '''
-    telescope = batoid.Optic.fromYaml("ComCamSpiders_r.yaml")
-    '''
-    for surface in telescope.itemDict.values():
-            if isinstance(surface, batoid.RefractiveInterface):
-                if surface.name.split('_')[0] in ['L1']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9519450133010235, 0.9519450133010235)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.95194501330102359, 0.9519450133010235)
-                elif surface.name.split('_')[0] in ['L2']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9510109078711367, 0.9510109078711367)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9510109078711367, 0.9510109078711367)
-                elif surface.name.split('_')[0] in ['L3']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9528543599768664, 0.9528543599768664)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9528543599768664, 0.9528543599768664)
-                elif surface.name.split('_')[0] in ['Filter']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9441339435556122, 0.9441339435556122)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9441339435556122, 0.9441339435556122)
-            if isinstance(surface, batoid.Detector):
-                surface.forwardCoating = batoid.SimpleCoating(1-0.9213684000000424, 0.9213684000000424)
-    ''' # Pour 666nm au haut et 622.17nm en bas
-    
-    for surface in telescope.itemDict.values():
-            if isinstance(surface, batoid.RefractiveInterface):
-                if surface.name.split('_')[0] in ['L1']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9516768353277874, 0.9516768353277874)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9516768353277874, 0.9516768353277874)
-                elif surface.name.split('_')[0] in ['L2']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9469600169240043, 0.9469600169240043)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9469600169240043, 0.9469600169240043)
-                elif surface.name.split('_')[0] in ['L3']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9531593356044364, 0.9531593356044364)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9531593356044364, 0.9531593356044364)
-                elif surface.name.split('_')[0] in ['Filter']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-0.9542022542740184, 0.9542022542740184)
-                    surface.reverseCoating = batoid.SimpleCoating(1-0.9542022542740184, 0.9542022542740184)
-            if isinstance(surface, batoid.Detector):
-                surface.forwardCoating = batoid.SimpleCoating(1-0.8973497700000442, 0.8973497700000442)
-    
-    return telescope
-
-def initParams(image, rot, bins=8, nrad=300, naz=900, maxflux=1.0, minflux=1e-4, pos=None, thetapos=None):
+def getTransmissionRate(band, wavelength=None):
     '''
 
     Parameters
     ----------
-    image : np.array
-        image.fits.getArray()
-        Bin's values
-    metadata : dict
-        meta-data of the image
-    nrad : int, optional
-        number of circle for asPolar simulation 
-        The default is 300.
-    naz : int, optional
-        number of point on each circle (see naz)
-        The default is 900.
-    maxflux : float, optional
-        initial flux value
-        The default is 1.0.
-    minflux : float, optional
-        minimum final flux value
-        The default is 1e-5.
+    band : string
+        'u', 'g', 'r', 'i', 'z', or 'y'
+    wavelength : float in nm, optional
+        Wavlength to obtain transmission and reflection rate for the telescope.
+        If is None, we take the medium wavelength of the band.
 
     Returns
     -------
-    init_simu : list
-        initial data for Batoid's calculus
+    t : array
+        Transmission's rate for each optic element.
+    wavelength : float
+        Wavelength (return because of cause it was on None).
 
     '''
-    if thetapos != None:
-        theta_x = thetapos[0]
-        theta_y = thetapos[1]
+    
+    t = []
+    
+    if wavelength == None:
+        bands = {"u": 355.0, "g": 475.0, "r": 622.0, "i": 763.0, "z": 905.0, "y": 1000.0}
+        path = "../data/"
+        files = [path + "lens1" + ".dat",
+                 path + "lens2" + ".dat",
+                 path + "filter_" + band + ".dat",
+                 path + "lens3" + ".dat",
+                 path + "detector" + ".dat"]
         
-    elif pos != None:
-        ny, nx = image.shape
-        x0, y0 = nx / 2, ny / 2
-        scale = 0.2
-        dx = (pos[0] - x0) * scale * bins
-        dy = (pos[1] - y0) * scale * bins
-        theta_x = dx / 3600
-        theta_y = dy / 3600   
+        for i in range(5):
+            df = pd.read_csv(files[i], comment="#", sep=r'\s+', names=["wavelength", "throughput"])
+            
+            wavelengths = df["wavelength"].values
+            throughput = df["throughput"].values
+            
+            wavelength = bands[band]
+            index = np.argmin(np.abs(wavelengths - wavelength))
+            t.append(throughput[index])
+    
     else:
-        theta_x, theta_y = getCoordBatoid(image, bins=bins)
+        path = "../data/"
+        files = [path + "lens1" + ".dat",
+                 path + "lens2" + ".dat",
+                 path + "filter_" + band + ".dat",
+                 path + "lens3" + ".dat",
+                 path + "detector" + ".dat"]
         
-    init_simu = [(theta_x, theta_y, nrad, naz, maxflux, minflux)]
-    theta = np.deg2rad(rot) # Changer angle
-    init_simu = rotBeforeBatoid(init_simu, theta)
+        for i in range(5):
+            df = pd.read_csv(files[i], comment="#", sep=r'\s+', names=["wavelength", "throughput"])
+            
+            wavelengths = df["wavelength"].values
+            throughput = df["throughput"].values
+            
+            index = np.argmin(np.abs(wavelengths - wavelength))
+            t.append(throughput[index])
+            
+    return t, wavelength
+
+def initTelescope(band, t=None, r=None, wavelength=None):
+    '''
+
+    Parameters
+    ----------
+    band : string
+        'u', 'g', 'r', 'i', 'z', or 'y'
+    t : array, optional
+        Transmission's rate for each optic element.
+        The default is None.
+    r : array, optional
+        Reflection's rate for each optic element.
+        The default is None.
+    wavelength : float, optional
+        Wavelength for the work.
+        The default is None.
+
+    Returns
+    -------
+    telescope : Batoid.Optic
+        ComCam in the band give with new transmission/reflection rate. Need for Batoid's simulation
+    wavelength : float
+        Wavelength used to obtain transmission/reflection rate.
+        return because in case is was on None.
+
+    '''
+    file_yaml = "ComCamSpiders_" + band + ".yaml"
+    telescope = batoid.Optic.fromYaml(file_yaml)
+    
+    if t == None and r == None:
+        if wavelength == None:
+            t, wavelength = getTransmissionRate(band, wavelength)
+        else:
+            t = getTransmissionRate(band, wavelength)[0]
+        for surface in telescope.itemDict.values():
+                if isinstance(surface, batoid.RefractiveInterface):
+                    if surface.name.split('_')[0] in ['L1']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[0], t[0])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[0], t[0])
+                    elif surface.name.split('_')[0] in ['L2']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[1], t[1])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[1], t[1])
+                    elif surface.name.split('_')[0] in ['L3']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[2], t[2])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[2], t[2])
+                    elif surface.name.split('_')[0] in ['Filter']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[3], t[3])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[3], t[3])
+                if isinstance(surface, batoid.Detector):
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[4], t[4])
+    
+    elif t != None and r != None:
+        for surface in telescope.itemDict.values():
+                if isinstance(surface, batoid.RefractiveInterface):
+                    if surface.name.split('_')[0] in ['L1']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[0], t[0])
+                        surface.reverseCoating = batoid.SimpleCoating(r[0], t[0])
+                    elif surface.name.split('_')[0] in ['L2']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[1], t[1])
+                        surface.reverseCoating = batoid.SimpleCoating(r[1], t[1])
+                    elif surface.name.split('_')[0] in ['L3']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[2], t[2])
+                        surface.reverseCoating = batoid.SimpleCoating(r[2], t[2])
+                    elif surface.name.split('_')[0] in ['Filter']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[3], t[3])
+                        surface.reverseCoating = batoid.SimpleCoating(r[3], t[3])
+                if isinstance(surface, batoid.Detector):
+                    surface.forwardCoating = batoid.SimpleCoating(r[4], t[4])
+                    
+    elif t != None:
+        for surface in telescope.itemDict.values():
+                if isinstance(surface, batoid.RefractiveInterface):
+                    if surface.name.split('_')[0] in ['L1']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[0], t[0])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[0], t[0])
+                    elif surface.name.split('_')[0] in ['L2']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[1], t[1])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[1], t[1])
+                    elif surface.name.split('_')[0] in ['L3']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[2], t[2])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[2], t[2])
+                    elif surface.name.split('_')[0] in ['Filter']:
+                        surface.forwardCoating = batoid.SimpleCoating(1-t[3], t[3])
+                        surface.reverseCoating = batoid.SimpleCoating(1-t[3], t[3])
+                if isinstance(surface, batoid.Detector):
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[4], t[4])
+                    
+    elif r != None:
+        for surface in telescope.itemDict.values():
+                if isinstance(surface, batoid.RefractiveInterface):
+                    if surface.name.split('_')[0] in ['L1']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[0], 1-r[0])
+                        surface.reverseCoating = batoid.SimpleCoating(r[0], 1-r[0])
+                    elif surface.name.split('_')[0] in ['L2']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[1], 1-r[1])
+                        surface.reverseCoating = batoid.SimpleCoating(r[1], 1-r[1])
+                    elif surface.name.split('_')[0] in ['L3']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[2], 1-r[2])
+                        surface.reverseCoating = batoid.SimpleCoating(r[2], 1-r[2])
+                    elif surface.name.split('_')[0] in ['Filter']:
+                        surface.forwardCoating = batoid.SimpleCoating(r[3], 1-r[3])
+                        surface.reverseCoating = batoid.SimpleCoating(r[3], 1-r[3])
+                if isinstance(surface, batoid.Detector):
+                    surface.forwardCoating = batoid.SimpleCoating(r[4], 1-r[4])
+                    
+    else:
+        print("No change of transmission and reflection rate.")
+    
+    return telescope, wavelength
+
+def initParams(thetapos, rot, nrad=300, naz=900, minflux=1e-3):
+    '''
+
+    Parameters
+    ----------
+    thetapos : (theta_x, theta_y)
+        Position of the source in Batoid's coordinates.
+    rot : float
+        Rotation of ComCam with the sky.
+    nrad : int, optional
+        Number of circle for AsPolar simulation.
+        The default is 300.
+    naz : int, optional
+        Number of points on each circle for AsPolar simulation.
+        Must be a multiple of 6.
+        The default is 900.
+    minflux : float, optional
+        Cutoff for Batoid's calculus. The default is 1e-3.
+
+    Returns
+    -------
+    init_simu : array
+        Parameters to start the ray tracing simulation.
+
+    '''
+    theta_x = thetapos[0]
+    theta_y = thetapos[1]
+        
+    init_simu = [(theta_x, theta_y, nrad, naz, minflux)]
+    init_simu = rotBeforeBatoid(init_simu, rot)
     return init_simu
 
-def batoidCalcul(telescope, init_simu, debug=False):
+def batoidCalcul(telescope, init_simu, wavelength, debug=False):
     '''
 
     Parameters
     ----------
     telescope : Batoid.Optic
         telescope use for Batoid's simulation
-    init_simu : list
+    init_simu : array
         initial data for Batoid's calculus
+    wavelength : float
+        Wavelength to simulate.
     debug : bool, optional
         print more informations for debug
         The default is False.
@@ -191,12 +327,12 @@ def batoidCalcul(telescope, init_simu, debug=False):
     for dat in init_simu:
     
         rays = batoid.RayVector.asPolar(
-            optic=telescope, wavelength=622.2e-9,
+            optic=telescope, wavelength=wavelength,
             theta_x=np.deg2rad(dat[0]), theta_y=np.deg2rad(dat[1]),
-            nrad=dat[2], naz=dat[3], flux=dat[4]
+            nrad=dat[2], naz=dat[3], flux=1.0
         )
     
-        rForward, rReverse = telescope.traceSplit(rays, minFlux=dat[5], _verbose=False) # _verbose = log calculus
+        rForward, rReverse = telescope.traceSplit(rays, minFlux=dat[4], _verbose=False) # _verbose = log calculus
     
         for i, rr in enumerate(rForward):
             x.append([ix for ix in rr.x])
@@ -219,91 +355,6 @@ def batoidCalcul(telescope, init_simu, debug=False):
         ))
 
     return x, y, flux, paths
-
-def batoidCalcul2(init_simu):
-    '''
-
-    Parameters
-    ----------
-    telescope : Batoid.Optic
-        telescope use for Batoid's simulation
-    init_simu : list
-        initial data for Batoid's calculus
-    debug : bool, optional
-        print more informations for debug
-        The default is False.
-
-    Returns
-    -------
-    x : np.array
-        x coordinates of rays in Batoid's referentiel
-    y : np.array
-        y coordinates of rays in Batoid's referentiel
-    flux : np.array
-        flux values of each rays
-
-    '''
-    # wavelenght = np.array([540.0e-9,580.0e-9,620.0e-9,660.0e-9,700.0e-9])
-    
-    # L1 = np.array([0.9473656178595908, 0.9487472881118438, 0.9515581750487883, 0.9521221952988791, 0.9495472617064802])
-    # L2 = np.array([0.938148973589068, 0.9401417728987096, 0.9466205595400999, 0.9507516177855074, 0.9503512461572875])
-    # L3 = np.array([0.9566516937772196, 0.9544130930928716, 0.9531789255651926, 0.9528765064914722, 0.9524670910461178])
-    # Filter = np.array([0.035443222206936145, 0.4975571325762805, 0.5314882302960491, 0.5670596511840295, 0.04828171062891763])
-    # Detector = np.array([0.862944000000011, 0.8753575200000265, 0.8961033600000373, 0.9184341600000414, 0.9347832000000273])
-    
-    # factor_flux = np.array([1.826506e-13, 1.97499e-13, 1.911044e-13, 1.919171e-13, 1.80519e-13])
-    # factor_flux = factor_flux / np.max(factor_flux)
-
-    wavelenght = np.array([634.0e-9])
-    
-    L1 = np.array([0.9523404062480814])
-    L2 = np.array([0.9487676941242609])
-    L3 = np.array([0.9532206045692587])
-    Filter = np.array([0.9454090388657778])
-    Detector = np.array([0.9041446800000388])
-    
-    factor_flux = np.array([1.974203e-13])
-    factor_flux = factor_flux / np.max(factor_flux)
-    
-    x, y, flux = [], [], []
-    
-    for i in range(len(wavelenght)):
-
-        telescope = batoid.Optic.fromYaml("ComCamSpiders_r.yaml")
-        
-        for surface in telescope.itemDict.values():
-            if isinstance(surface, batoid.RefractiveInterface):
-                if surface.name.split('_')[0] in ['L1']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-L1[i], L1[i])
-                    surface.reverseCoating = batoid.SimpleCoating(1-L1[i], L1[i])
-                elif surface.name.split('_')[0] in ['L2']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-L2[i], L2[i])
-                    surface.reverseCoating = batoid.SimpleCoating(1-L2[i], L2[i])
-                elif surface.name.split('_')[0] in ['L3']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-L3[i], L3[i])
-                    surface.reverseCoating = batoid.SimpleCoating(1-L3[i], L3[i])
-                elif surface.name.split('_')[0] in ['Filter']:
-                    surface.forwardCoating = batoid.SimpleCoating(1-Filter[i], Filter[i])
-                    surface.reverseCoating = batoid.SimpleCoating(1-Filter[i], Filter[i])
-            if isinstance(surface, batoid.Detector):
-                surface.forwardCoating = batoid.SimpleCoating(1-Detector[i], Detector[i])
-                
-        for dat in init_simu:
-        
-            rays = batoid.RayVector.asPolar(
-                optic=telescope, wavelength=wavelenght[i],
-                theta_x=np.deg2rad(dat[0]), theta_y=np.deg2rad(dat[1]),
-                nrad=dat[2], naz=dat[3], flux=factor_flux[i]
-            )
-        
-            rForward, rReverse = telescope.traceSplit(rays, minFlux=dat[5], _verbose=False) # _verbose = log calculus
-        
-            for i, rr in enumerate(rForward):
-                x.append([ix for ix in rr.x])
-                y.append([iy for iy in rr.y])
-                flux.append([iflux for iflux in rr.flux])
-
-    return x, y, flux
 
 def groupData(x, y, flux):
     '''
@@ -347,11 +398,12 @@ def getSimuImage(px, py, x, y, flux, binning):
         y coordinates of rays with a dimension for each ghost
     flux : np.array
         flux of rays with a dimension for each ghost
+    binning : int
+        Binning used on the data.
 
     Returns
     -------
-    fig : plt.fig
-        subplot of the both images
+    H.T : Histogram2D of all ghosts.
 
     '''
     # On suppose que x_prime, y_prime et flux sont des arrays 1D avec les positions et le flux associé
@@ -368,12 +420,40 @@ def getSimuImage(px, py, x, y, flux, binning):
     y = y[mask]
     flux = flux[mask]
     
-    H, xedges, yedges = np.histogram2d(x, y, bins=[px, py], weights=flux, range=[[x_min, x_max], [y_min, y_max]])
+    H, _, _ = np.histogram2d(x, y, bins=[px, py], weights=flux, range=[[x_min, x_max], [y_min, y_max]])
+    H = H.T
+    H = H[::-1, :]
+    return H
 
-    return H.T, xedges, yedges
+def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=None):
+    '''
 
-def getGhosts(telescope, init_simu):
-    xsep, ysep, flux, path = batoidCalcul(telescope, init_simu)
+    Parameters
+    ----------
+    telescope : Batoid.Optic
+        telescope use for Batoid's simulation
+    init_simu : array
+        initial data for Batoid's calculus
+    wavelength : float
+        Wavelength to simulate.
+    nbghost : int, optional
+        Number of ghost you need.
+        It will return the n most brightness ghosts in surface.
+        The default is 5.
+    ghostmap : bool, optional
+        If on True, it will plot a map of ghosts on informations on them.
+        The default is False.
+    name : string, optional
+        Save the ghostmap as name.png.
+        The default is None.
+
+    Returns
+    -------
+    tuple
+        x, y and the flux of each rays regroup.
+
+    '''
+    xsep, ysep, flux, path = batoidCalcul(telescope, init_simu, wavelength)
     nghost = len(xsep)
     ref = ['L1_entrance', 'L1_exit', 'L2_entrance', 'L2_exit', 'Filter_entrance', 'Filter_exit', 'L3_entrance', 'L3_exit', 'Detector']
     paths = []
@@ -381,8 +461,6 @@ def getGhosts(telescope, init_simu):
     for i in range(nghost):
         paths.append([ipath for ipath in path[i] if ipath in ref])
         
-    
-
     if nghost == 0:
         return [], [], []
     
@@ -409,14 +487,15 @@ def getGhosts(telescope, init_simu):
         individual_areas = [hex_area for _ in offsets[mask]]
         flux_update.append(flux[i][0]/(len(individual_areas)*hex_area))
         # print(f"Flux/m2 for ghost {i+1} : {flux_update}")
-
-        if flux_update[i] > 1e-1:
-            idx_keep.append(i)
     
     plt.close()
 
     path = paths.copy()
     x, y, f, paths = [], [], [], []
+    
+    nbghost += 1
+    
+    idx_keep = np.argsort(flux_update)[-nbghost:][::-1]
     
     for i in idx_keep:
         if flux_update[i]==np.max(flux_update):
@@ -427,83 +506,64 @@ def getGhosts(telescope, init_simu):
         f.append([iflux for iflux in flux[i]])
         paths.append([ipath for ipath in path[i]])
 
-    def get_subplot_grid(num_subplots):
-        n_cols = math.ceil(math.sqrt(num_subplots))
-        n_rows = math.ceil(num_subplots / n_cols)
-        return n_rows, n_cols
-
-    nrows, ncols = get_subplot_grid(len(idx_keep))
-    
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows), constrained_layout=True)
-
-    if nrows == 1 or ncols == 1:
-        axes = axes.flatten() if isinstance(axes, np.ndarray) else [axes]
-    else:
-        axes = np.array(axes).flatten()
-    
-    hexbin_collection = [None] * len(idx_keep)
-    
-    for i in range(len(idx_keep)):
-        xi, yi = rotAfterBatoid(np.array(xsep[idx_keep[i]]), np.array(ysep[idx_keep[i]]), 77.89209882814671)
-        hexbin_collection[i] = axes[i].hexbin(
-            xi, yi, extent=[-0.25, 0.25, -0.25, 0.25],
-            gridsize=400
-        )
-        th = np.linspace(0, 2*np.pi, 1000)
-        axes[i].plot(0.32/5*np.cos(th), 0.32/5*np.sin(th), c='r', label="Cercle optique")
-    
-        # w = np.argmin([len(ipath) for ipath in paths])
-        # axes[i].plot(np.mean(x[w]), np.mean(y[w]), marker='+', color='m')
-    
-        offsets = hexbin_collection[i].get_offsets()
-        counts = hexbin_collection[i].get_array()
+    if ghostmap == True:
         
-        hex_size = 0.5 / 400
-        hex_area = (3 * np.sqrt(3) / 2) * (hex_size ** 2)
+        def get_subplot_grid(num_subplots):
+            n_cols = math.ceil(math.sqrt(num_subplots))
+            n_rows = math.ceil(num_subplots / n_cols)
+            return n_rows, n_cols
     
-        mask = counts > 0
-        individual_areas = [hex_area for _ in offsets[mask]]
+        nrows, ncols = get_subplot_grid(len(idx_keep))
         
-        axes[i].set_xlabel(f"{np.array(path[idx_keep[i]])}", fontsize=8, color="gray", labelpad=5)
-        axes[i].set_title(f"Ghost {i+1}, Flux : {flux[idx_keep[i]][0]/(len(individual_areas)*hex_area):.5f}", fontsize=10)
-        axes[i].axis("equal")
-        
-    for i in range(len(idx_keep), len(axes)):
-        axes[i].axis("off")
+        fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows), constrained_layout=True)
     
-    # Add a description under the figure
-    plt.savefig('all_ghosts.png', bbox_inches='tight')
-    plt.show()
+        if nrows == 1 or ncols == 1:
+            axes = axes.flatten() if isinstance(axes, np.ndarray) else [axes]
+        else:
+            axes = np.array(axes).flatten()
+        
+        hexbin_collection = [None] * len(idx_keep)
+        
+        for i in range(len(idx_keep)):
+            xi, yi = rotAfterBatoid(np.array(xsep[idx_keep[i]]), np.array(ysep[idx_keep[i]]), 77.89209882814671)
+            hexbin_collection[i] = axes[i].hexbin(
+                xi, yi, extent=[-0.25, 0.25, -0.25, 0.25],
+                gridsize=400
+            )
+            th = np.linspace(0, 2*np.pi, 1000)
+            axes[i].plot(0.32/5*np.cos(th), 0.32/5*np.sin(th), c='r', label="Cercle optique")
+        
+            offsets = hexbin_collection[i].get_offsets()
+            counts = hexbin_collection[i].get_array()
+            
+            hex_size = 0.5 / 400
+            hex_area = (3 * np.sqrt(3) / 2) * (hex_size ** 2)
+        
+            mask = counts > 0
+            individual_areas = [hex_area for _ in offsets[mask]]
+            
+            axes[i].set_xlabel(f"{np.array(path[idx_keep[i]])}", fontsize=8, color="gray", labelpad=5)
+            axes[i].set_title(f"Ghost {i+1}, Flux : {flux[idx_keep[i]][0]/(len(individual_areas)*hex_area):.5f}", fontsize=10)
+            axes[i].axis("equal")
+            
+        for i in range(len(idx_keep), len(axes)):
+            axes[i].axis("off")
+        
+        # Add a description under the figure
+        if name != None:
+            plt.savefig(name, bbox_inches='tight')
+        plt.show()
     
     x, y, f = groupData(x, y, f)
 
     return x, y, f
-        
-def getSmoothSimu(simu, sigma=1.0):
-    simu = np.nan_to_num(simu, nan=0.0, posinf=0.0, neginf=0.0)
-    smoothed = gaussian_filter(simu, sigma=sigma)
-    return smoothed
-
-def getNoiseSimu(image, mu, sigma):
-    # Taille de l'image simulée
-    nx, ny = image.shape[1], image.shape[0]
-    
-    # Génération d'une "image" de bruit 2D
-    image_bruit = np.random.normal(loc=mu, scale=sigma, size=(nx, ny))
-    
-    return image_bruit.T
-
-def showNoiseSimu(image, mu, sigma):
-    image_bruit = getNoiseSimu(image=image, mu=mu, sigma=sigma)
-
-    plt.imshow(image_bruit, origin='lower', cmap='viridis', aspect='auto')
-    plt.colorbar(label='Valeur du pixel')
-    plt.title("Image simulée - Bruit gaussien")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.show()
 
 def getAiry(xstar, ystar, rot, D=8.36, f=9.8648):
+    '''
+
+    Work in progress, do not use in this form.
+
+    '''
     binning = 8.0
     wavelength = 666e-9  # m
     
@@ -554,6 +614,11 @@ def getAiry(xstar, ystar, rot, D=8.36, f=9.8648):
     return image_psf # image_psf > psf_norm
 
 def psfNorm(theta_x, theta_y):
+    '''
+
+    Work in progress, do not use in this form.
+
+    '''
     target_Ny, target_Nx = 1577, 1586
     nx = max(target_Ny, target_Nx)
 

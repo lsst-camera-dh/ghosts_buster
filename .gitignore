@@ -3,7 +3,6 @@
 */*.gif
 */*.png
 */*/*.png
-data/
 *.gif
 
 # File and direcory Python

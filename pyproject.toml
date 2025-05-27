@@ -1,6 +1,6 @@
 [project]
 name = "lsst-ghost-buster"
-version = "0.1.0"
+version = "0.2.0"
 description = "A package to explore ghost artefact in the LSST"
 authors = [{ name = "Dimitri Buffat", email = "dimitri.buffat@etu.univ-lyon1.fr" }]
 readme = "README.md"

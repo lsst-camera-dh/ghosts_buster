@@ -1,7 +1,7 @@
 ghosts\_simu module
 ===================
 
-.. automodule:: ghosts_simu
+.. automodule:: ghost_buster.ghosts_simu
    :members:
    :undoc-members:
    :show-inheritance:

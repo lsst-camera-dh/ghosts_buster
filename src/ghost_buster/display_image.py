@@ -11,7 +11,6 @@ def displayImage(image, title=None, name=None):
     fig = plt.figure(figsize=(10,10))
     afw_display = afwDisplay.Display(1)
     afw_display.scale('asinh', 'zscale')
-    #afw_display.scale('linear', min=-5, max=10)
     afw_display.setImageColormap(cmap='plasma')
     afw_display.mtv(image)
     plt.title(title)
@@ -78,9 +77,6 @@ def displaySub(image, name=None, starpos=None):
     im = ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
 
     if starpos != None:
-        #th = np.linspace(0, 2*np.pi, 1000)
-        #ax.plot(starpos[0]-185 + 43*np.cos(th), starpos[1]-140 + 43*np.sin(th), c='r')
-        #ax.plot(starpos[0]-185 + 90*np.cos(th), starpos[1]-140 + 90*np.sin(th), c='g')
         ax.plot(starpos[0]-185, starpos[1]-140, '+', c='r')
     plt.title("Subimage")
 
@@ -89,31 +85,17 @@ def displaySub(image, name=None, starpos=None):
     plt.show()
 
 def displaySimu(hist, x, y, name=None):
-    CCD_DX = 43.333/1000.
-
-    x_min, x_max, dx = -CCD_DX*1.5, CCD_DX*1.5, CCD_DX
-    y_min, y_max, dy = -CCD_DX*1.5, CCD_DX*1.5, CCD_DX
     
-    x_grid = np.arange(x_min, x_max + dx, dx)
-    y_grid = np.arange(y_min, y_max + dy, dy)
-
     X, Y = np.meshgrid(x, y)
     
     fig, ax = plt.subplots(figsize=(8, 8))
     
     im = ax.pcolormesh(X, Y, hist, vmax=4e-2)
-    '''
-    for xi in x_grid:
-        ax.plot([xi, xi], [y_min, y_max], c="r")
-    for yi in y_grid:
-        ax.plot([x_min, x_max], [yi, yi], c="r")
-    '''
-    #ax.set_xlim(x_min, x_max)
-    #ax.set_ylim(y_min, y_max)
     ax.set_aspect("equal")
     ax.set_facecolor('black')
     plt.xticks([])
     plt.yticks([])
+    
     if name != None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()
@@ -126,6 +108,7 @@ def displayClean(image, name=None):
     fig.colorbar(im, ax=ax)
     plt.xticks([])
     plt.yticks([])
+    
     if name != None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()
@@ -143,22 +126,10 @@ def displayFit(image, hist, x, y, clean, name=None):
     ax = axes[1]
     ax.set_facecolor('black')
 
-    CCD_DX = 43.333 / 1000.
-    x_min, x_max, dx = -CCD_DX * 1.5, CCD_DX * 1.5, CCD_DX
-    y_min, y_max, dy = -CCD_DX * 1.5, CCD_DX * 1.5, CCD_DX
-    x_grid = np.arange(x_min, x_max + dx, dx)
-    y_grid = np.arange(y_min, y_max + dy, dy)
     X, Y = np.meshgrid(x, y)
 
     pcm = ax.pcolormesh(X, Y, hist, vmax=4e-2, shading='auto', norm='log')
-    '''
-    for xi in x_grid:
-        ax.plot([xi, xi], [y_min, y_max], c="r")
-    for yi in y_grid:
-        ax.plot([x_min, x_max], [yi, yi], c="r")
-    '''
-    #ax.set_xlim(x_min, x_max)
-    #ax.set_ylim(y_min, y_max)
+    
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
@@ -173,6 +144,7 @@ def displayFit(image, hist, x, y, clean, name=None):
     ax.set_yticks([])
 
     plt.tight_layout()
+    
     if name != None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()
@@ -210,23 +182,6 @@ def displayFit2(image, temp, clean, name=None):
     plt.show()
 
 def displayRemoveSources(image, image_ghosts, name=None):
-    '''
-
-    Parameters
-    ----------
-    image : np.array
-        image.fits.getArray()
-        Bin's values
-    image_ghosts : np.array
-        image without brightness sources
-        Bin's values
-
-    Returns
-    -------
-    fig : plt.fig
-        subplot of the both images
-
-    '''
     mean, median, std = statsImage(image)
     fig = plt.figure(figsize=(16, 16))
     plt.subplot(1, 2, 1)
@@ -258,23 +213,6 @@ def displayRemoveSourcesBoth(image, image_ghosts, name=None):
     plt.show()
 
 def displaySourcesAndGhosts(image, name=None):
-    '''
-
-    Parameters
-    ----------
-    image : np.array
-        image.fits.getArray()
-        Bin's values
-    image_ghosts : np.array
-        image without brightness sources
-        Bin's values
-
-    Returns
-    -------
-    fig : plt.fig
-        subplot of the both images
-
-    '''
     mean, median, std = statsImage(image)
     image_source = extractSources(image)
     image_ghosts = removeSources(image)
@@ -293,7 +231,6 @@ def displaySourcesAndGhosts(image, name=None):
 def displayCut(image, xpos, ypos, name=None):
     fig = plt.figure(figsize=(16, 6))
 
-    # Coupe en x (ligne à ypos)
     plt.subplot(1, 2, 1)
     x = image[:, int(xpos)]
     x_idx = np.arange(len(x))
@@ -303,7 +240,6 @@ def displayCut(image, xpos, ypos, name=None):
     plt.ylim(-1000, 3000)
     plt.title(f"Cut at x = {xpos}")
 
-    # Coupe en y (colonne à xpos)
     plt.subplot(1, 2, 2)
     y = image[int(ypos), :]
     y_idx = np.arange(len(y))
@@ -314,6 +250,7 @@ def displayCut(image, xpos, ypos, name=None):
     plt.title(f"Cut at y = {ypos}")
 
     plt.tight_layout()
+    
     if name is not None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()
