@@ -54,7 +54,7 @@ def statsImage(image):
     mean, median, std = sigma_clipped_stats(image, sigma=3.0)
     return mean, median, std
     
-def removeSources(image):
+def removeSources(image, value=0.0):
     '''
 
     Parameters
@@ -62,6 +62,8 @@ def removeSources(image):
     image : np.array
         image.fits.getArray()
         Bin's values
+    value : float, optionnal
+        New value which replace the detected sources. The default is 0.0
 
     Returns
     -------
@@ -74,7 +76,7 @@ def removeSources(image):
     threshold = median + 3.0 * std
     segm = detect_sources(smoothed, threshold=threshold, npixels=5)
     source_mask = segm.make_source_mask()
-    ghosts_only = np.where(source_mask, 0.0, image)
+    ghosts_only = np.where(source_mask, value, image)
     return ghosts_only
 
 def removeSourcesBoth(image, hist):

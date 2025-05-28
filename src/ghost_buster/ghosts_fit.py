@@ -4,7 +4,7 @@ from astropy.stats import sigma_clipped_stats
 from scipy.optimize import curve_fit
 from scipy.stats import binned_statistic
 from iminuit import Minuit
-from .sources_image import removeSourcesBoth
+from .sources_image import removeSources, removeSourcesBoth
 
 version = "0.2"
 
@@ -68,17 +68,15 @@ def two_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
     gauss2 = A2 * np.exp(-0.5 * ((x - mu2) / sigma2)**2)
     return gauss1, gauss2
 
-def getNoise(image, x=[(1100, 1400)], y=[(100, 400)], sigma=10.0, name=None):
+def getNoise(image, bounds=None, sigma=10.0, name=None):
     '''
 
     Parameters
     ----------
     image : array
         ImageFits.getArray().
-    x : list of tuple, optionnal
-        Bounds interval along x axis. The default is [(1100, 1400)].
-    y : list of tuple, optional
-        Bounds interval along y axis. The default is [(100, 400)].
+    bounds : tuple, optionnal
+        Bounds interval as (xmin, ymin, xmax, ymax). The default is None
     sigma : float, optional
         Number of sigma for the selection of data. The default is 10.0.
     name : string, optional
@@ -91,16 +89,17 @@ def getNoise(image, x=[(1100, 1400)], y=[(100, 400)], sigma=10.0, name=None):
         Mean value of the noise.
 
     '''
-    n = len(x)
-    sub_image = []
-    
-    sub_image = np.concatenate([image[x[i][0]:x[i][1], y[i][0]:y[i][1]].flatten() for i in range(n)])
 
+    if bounds != None:
+        sub_image = image[bounds[0]:bounds[3], bounds[2]:bounds[4]].ravel()
+    else:
+        sub_image = removeSources(image, np.nan).ravel()
+    sub_image = sub_image[~np.isnan(sub_image)]
+    
     mean, median, std = sigma_clipped_stats(sub_image, sigma=3.0)
     
-    x_hist = sub_image.flatten()
-    mask = (x_hist > mean - sigma*std) & (x_hist < mean + sigma*std)
-    x_hist = x_hist[mask]
+    mask = (sub_image > mean - sigma*std) & (sub_image < mean + sigma*std)
+    x_hist = sub_image[mask]
 
     hist_vals, bin_edges = np.histogram(x_hist, bins=100, density=True)
     bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
