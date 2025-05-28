@@ -14,9 +14,9 @@ from iminuit import Minuit
 import lsst.afw.image as afwimage
 import lsst.afw.fits as afwfits
 
-ghost_292=afwimage.ImageF.readFits("../notebooks/comcam_ghosts/ghost_054.fits", 0)
-md_292=afwfits.readMetadata("../notebooks/comcam_ghosts/ghost_054.fits")
-real = ghost_292.getArray()
+ghost=afwimage.ImageF.readFits("../notebooks/comcam_ghosts/ghost_054.fits", 0)
+md=afwfits.readMetadata("../notebooks/comcam_ghosts/ghost_054.fits")
+real = ghost.getArray()
 
 def fit(real):
     real = np.nan_to_num(real, nan=0.0, posinf=0.0, neginf=0.0)
@@ -44,7 +44,7 @@ def fit(real):
     print(f"txpos = {txpos}, typos = {typos}")
     
     def chi2(tx, ty):
-        init_params = gsim.initParams(real, md_292, bins=8, nrad=600, naz=1200, minflux=1e-3, thetapos=(tx, ty))
+        init_params = gsim.initParams(real, md["ROTPA"], bins=8, nrad=600, naz=1200, minflux=1e-3, thetapos=(tx, ty))
         x_grp, y_grp, flux_grp = gsim.getGhosts(telescope, init_params)
 
         real_flat = real.ravel()
@@ -52,7 +52,7 @@ def fit(real):
         if len(x_grp) == 0:
             return np.sum((real_flat)**2)
         
-        x_grp, y_grp = gsim.rotAfterBatoid(x_grp, y_grp, md_292)
+        x_grp, y_grp = gsim.rotAfterBatoid(x_grp, y_grp, md["ROTPA"])
         px, py = real.shape[1], real.shape[0]
         hist, x_hist, y_hist = gsim.getSimuImage(px, py, x_grp, y_grp, flux_grp, binning=8)
         hist = gfit.applyGrid(real, hist)

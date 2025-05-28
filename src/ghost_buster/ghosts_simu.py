@@ -38,6 +38,35 @@ def pixeltotheta(dimension, starpos, binning):
     theta_y = dy / 3600
     return theta_x, theta_y
 
+def thetatopixel(dimension, thetapos, binning):
+    '''
+
+    Parameters
+    ----------
+    dimension : tuple
+        data.shape for the changement of coordinates.
+    thetapos : tuple
+        (theta_x, theta_y), position of the star in Batoid's coordinates.
+    binning : int
+        Binng of the data.
+
+    Returns
+    -------
+    x_star : float
+        x position in the data (in pixel).
+    y_star : float
+        y position in the data (in pixel).
+
+    '''
+    ny, nx = dimension
+    x0, y0 = nx / 2, ny / 2
+    scale = 0.2
+    dx = thetapos[0] * 3600 
+    dy = thetapos[1] * 3600
+    xstar = x0 + dx / scale / binning
+    ystar = y0 + dy / scale / binning
+    return xstar, ystar
+
 def rotBeforeBatoid(data, rot):
     '''
 
@@ -119,11 +148,11 @@ def getTransmissionRate(band, wavelength=None):
     
     if wavelength == None:
         bands = {"u": 355.0, "g": 475.0, "r": 622.0, "i": 763.0, "z": 905.0, "y": 1000.0}
-        path = "../data/"
+        path = "../../data/"
         files = [path + "lens1" + ".dat",
                  path + "lens2" + ".dat",
-                 path + "filter_" + band + ".dat",
                  path + "lens3" + ".dat",
+                 path + "filter_" + band + ".dat",
                  path + "detector" + ".dat"]
         
         for i in range(5):
@@ -137,14 +166,14 @@ def getTransmissionRate(band, wavelength=None):
             t.append(throughput[index])
     
     else:
-        path = "../data/"
+        path = "../../data/"
         files = [path + "lens1" + ".dat",
                  path + "lens2" + ".dat",
-                 path + "filter_" + band + ".dat",
                  path + "lens3" + ".dat",
+                 path + "filter_" + band + ".dat",
                  path + "detector" + ".dat"]
         
-        for i in range(5):
+        for i in range(len(files)):
             df = pd.read_csv(files[i], comment="#", sep=r'\s+', names=["wavelength", "throughput"])
             
             wavelengths = df["wavelength"].values
@@ -152,7 +181,7 @@ def getTransmissionRate(band, wavelength=None):
             
             index = np.argmin(np.abs(wavelengths - wavelength))
             t.append(throughput[index])
-            
+
     return t, wavelength
 
 def initTelescope(band, t=None, r=None, wavelength=None):
@@ -188,84 +217,85 @@ def initTelescope(band, t=None, r=None, wavelength=None):
         if wavelength == None:
             t, wavelength = getTransmissionRate(band, wavelength)
         else:
-            t = getTransmissionRate(band, wavelength)[0]
+            t, _ = getTransmissionRate(band, wavelength)
+
         for surface in telescope.itemDict.values():
-                if isinstance(surface, batoid.RefractiveInterface):
-                    if surface.name.split('_')[0] in ['L1']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[0], t[0])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[0], t[0])
-                    elif surface.name.split('_')[0] in ['L2']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[1], t[1])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[1], t[1])
-                    elif surface.name.split('_')[0] in ['L3']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[2], t[2])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[2], t[2])
-                    elif surface.name.split('_')[0] in ['Filter']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[3], t[3])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[3], t[3])
-                if isinstance(surface, batoid.Detector):
-                    surface.forwardCoating = batoid.SimpleCoating(1-t[4], t[4])
-    
+            if isinstance(surface, batoid.RefractiveInterface):
+                if surface.name.split('_')[0] in ['L1']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[0], t[0])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[0], t[0])
+                elif surface.name.split('_')[0] in ['L2']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[1], t[1])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[1], t[1])
+                elif surface.name.split('_')[0] in ['L3']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[2], t[2])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[2], t[2])
+                elif surface.name.split('_')[0] in ['Filter']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[3], t[3])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[3], t[3])
+            if isinstance(surface, batoid.Detector):
+                surface.forwardCoating = batoid.SimpleCoating(1-t[4], t[4])
+                
     elif t != None and r != None:
         for surface in telescope.itemDict.values():
-                if isinstance(surface, batoid.RefractiveInterface):
-                    if surface.name.split('_')[0] in ['L1']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[0], t[0])
-                        surface.reverseCoating = batoid.SimpleCoating(r[0], t[0])
-                    elif surface.name.split('_')[0] in ['L2']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[1], t[1])
-                        surface.reverseCoating = batoid.SimpleCoating(r[1], t[1])
-                    elif surface.name.split('_')[0] in ['L3']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[2], t[2])
-                        surface.reverseCoating = batoid.SimpleCoating(r[2], t[2])
-                    elif surface.name.split('_')[0] in ['Filter']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[3], t[3])
-                        surface.reverseCoating = batoid.SimpleCoating(r[3], t[3])
-                if isinstance(surface, batoid.Detector):
-                    surface.forwardCoating = batoid.SimpleCoating(r[4], t[4])
+            if isinstance(surface, batoid.RefractiveInterface):
+                if surface.name.split('_')[0] in ['L1']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[0], t[0])
+                    surface.reverseCoating = batoid.SimpleCoating(r[0], t[0])
+                elif surface.name.split('_')[0] in ['L2']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[1], t[1])
+                    surface.reverseCoating = batoid.SimpleCoating(r[1], t[1])
+                elif surface.name.split('_')[0] in ['L3']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[2], t[2])
+                    surface.reverseCoating = batoid.SimpleCoating(r[2], t[2])
+                elif surface.name.split('_')[0] in ['Filter']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[3], t[3])
+                    surface.reverseCoating = batoid.SimpleCoating(r[3], t[3])
+            if isinstance(surface, batoid.Detector):
+                surface.forwardCoating = batoid.SimpleCoating(r[4], t[4])
                     
     elif t != None:
         for surface in telescope.itemDict.values():
-                if isinstance(surface, batoid.RefractiveInterface):
-                    if surface.name.split('_')[0] in ['L1']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[0], t[0])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[0], t[0])
-                    elif surface.name.split('_')[0] in ['L2']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[1], t[1])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[1], t[1])
-                    elif surface.name.split('_')[0] in ['L3']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[2], t[2])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[2], t[2])
-                    elif surface.name.split('_')[0] in ['Filter']:
-                        surface.forwardCoating = batoid.SimpleCoating(1-t[3], t[3])
-                        surface.reverseCoating = batoid.SimpleCoating(1-t[3], t[3])
-                if isinstance(surface, batoid.Detector):
-                    surface.forwardCoating = batoid.SimpleCoating(1-t[4], t[4])
+            if isinstance(surface, batoid.RefractiveInterface):
+                if surface.name.split('_')[0] in ['L1']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[0], t[0])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[0], t[0])
+                elif surface.name.split('_')[0] in ['L2']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[1], t[1])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[1], t[1])
+                elif surface.name.split('_')[0] in ['L3']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[2], t[2])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[2], t[2])
+                elif surface.name.split('_')[0] in ['Filter']:
+                    surface.forwardCoating = batoid.SimpleCoating(1-t[3], t[3])
+                    surface.reverseCoating = batoid.SimpleCoating(1-t[3], t[3])
+            if isinstance(surface, batoid.Detector):
+                surface.forwardCoating = batoid.SimpleCoating(1-t[4], t[4])
                     
     elif r != None:
         for surface in telescope.itemDict.values():
-                if isinstance(surface, batoid.RefractiveInterface):
-                    if surface.name.split('_')[0] in ['L1']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[0], 1-r[0])
-                        surface.reverseCoating = batoid.SimpleCoating(r[0], 1-r[0])
-                    elif surface.name.split('_')[0] in ['L2']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[1], 1-r[1])
-                        surface.reverseCoating = batoid.SimpleCoating(r[1], 1-r[1])
-                    elif surface.name.split('_')[0] in ['L3']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[2], 1-r[2])
-                        surface.reverseCoating = batoid.SimpleCoating(r[2], 1-r[2])
-                    elif surface.name.split('_')[0] in ['Filter']:
-                        surface.forwardCoating = batoid.SimpleCoating(r[3], 1-r[3])
-                        surface.reverseCoating = batoid.SimpleCoating(r[3], 1-r[3])
-                if isinstance(surface, batoid.Detector):
-                    surface.forwardCoating = batoid.SimpleCoating(r[4], 1-r[4])
+            if isinstance(surface, batoid.RefractiveInterface):
+                if surface.name.split('_')[0] in ['L1']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[0], 1-r[0])
+                    surface.reverseCoating = batoid.SimpleCoating(r[0], 1-r[0])
+                elif surface.name.split('_')[0] in ['L2']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[1], 1-r[1])
+                    surface.reverseCoating = batoid.SimpleCoating(r[1], 1-r[1])
+                elif surface.name.split('_')[0] in ['L3']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[2], 1-r[2])                        
+                    surface.reverseCoating = batoid.SimpleCoating(r[2], 1-r[2])
+                elif surface.name.split('_')[0] in ['Filter']:
+                    surface.forwardCoating = batoid.SimpleCoating(r[3], 1-r[3])
+                    surface.reverseCoating = batoid.SimpleCoating(r[3], 1-r[3])
+            if isinstance(surface, batoid.Detector):
+                surface.forwardCoating = batoid.SimpleCoating(r[4], 1-r[4])
                     
     else:
         print("No change of transmission and reflection rate.")
     
     return telescope, wavelength
 
-def initParams(thetapos, rot, nrad=300, naz=900, minflux=1e-3):
+def initParams(thetapos, rot, nrad=600, naz=1200, minflux=1e-3):
     '''
 
     Parameters
@@ -327,7 +357,7 @@ def batoidCalcul(telescope, init_simu, wavelength, debug=False):
     for dat in init_simu:
     
         rays = batoid.RayVector.asPolar(
-            optic=telescope, wavelength=wavelength,
+            optic=telescope, wavelength=wavelength*1e-9,
             theta_x=np.deg2rad(dat[0]), theta_y=np.deg2rad(dat[1]),
             nrad=dat[2], naz=dat[3], flux=1.0
         )
@@ -422,7 +452,7 @@ def getSimuImage(px, py, x, y, flux, binning):
     
     H, _, _ = np.histogram2d(x, y, bins=[px, py], weights=flux, range=[[x_min, x_max], [y_min, y_max]])
     H = H.T
-    H = H[::-1, :]
+
     return H
 
 def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=None):
@@ -486,7 +516,7 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
         mask = counts > 0
         individual_areas = [hex_area for _ in offsets[mask]]
         flux_update.append(flux[i][0]/(len(individual_areas)*hex_area))
-        # print(f"Flux/m2 for ghost {i+1} : {flux_update}")
+        print(f"Flux/m2 for ghost {i+1} : {flux_update[i]}")
     
     plt.close()
 
@@ -495,8 +525,21 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
     
     nbghost += 1
     
-    idx_keep = np.argsort(flux_update)[-nbghost:][::-1]
+    idx_in_cercle = []
     
+    for i in range(len(flux_update)):
+        r = np.sqrt(np.array(xsep[i])**2 + np.array(ysep[i])**2)
+        if np.any(r <= 0.32/5.0):
+            idx_in_cercle.append(i)
+    
+    idx_sorted = sorted(
+        idx_in_cercle,
+        key=lambda i: flux_update[i],
+        reverse=True
+        )
+    
+    idx_keep = idx_sorted[:nbghost]
+
     for i in idx_keep:
         if flux_update[i]==np.max(flux_update):
             continue
@@ -531,7 +574,7 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
                 gridsize=400
             )
             th = np.linspace(0, 2*np.pi, 1000)
-            axes[i].plot(0.32/5*np.cos(th), 0.32/5*np.sin(th), c='r', label="Cercle optique")
+            axes[i].plot(0.32/5.0*np.cos(th), 0.32/5.0*np.sin(th), c='r', label="Cercle optique")
         
             offsets = hexbin_collection[i].get_offsets()
             counts = hexbin_collection[i].get_array()
@@ -549,7 +592,6 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
         for i in range(len(idx_keep), len(axes)):
             axes[i].axis("off")
         
-        # Add a description under the figure
         if name != None:
             plt.savefig(name, bbox_inches='tight')
         plt.show()
@@ -557,6 +599,55 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
     x, y, f = groupData(x, y, f)
 
     return x, y, f
+
+def ccd_extractor(image):
+    '''
+
+    Parameters
+    ----------
+    image : image : array
+        ImageFits.getArray().
+
+    Returns
+    -------
+    array
+        ccd[n][0] = image on CCD n.
+        ccd[n][1] = origin (left bottom corner) of CCD n on the original data (in pixel).
+
+    '''
+    mask = ~np.isnan(image)
+    validate_lines = np.any(mask, axis=1)
+    line_blocs = _blocs_detector(validate_lines)
+
+    ccd = []
+
+    for i_start, i_end in line_blocs:
+        sub_line = image[i_start:i_end, :]
+        mask_col = ~np.isnan(sub_line)
+        validate_cols = np.any(mask_col, axis=0)
+        col_blocs = _blocs_detector(validate_cols)
+        
+        for j_start, j_end in col_blocs:
+            bloc = image[i_start:i_end, j_start:j_end]
+            if not np.isnan(bloc).any():
+                ccd.append((bloc.copy(), (i_start, j_start)))  # On copie pour éviter les effets de bord
+
+    return ccd
+
+def _blocs_detector(binary_vector):
+    blocs = []
+    in_bloc = False
+    for i, val in enumerate(binary_vector):
+        if val and not in_bloc:
+            start = i
+            in_bloc = True
+        elif not val and in_bloc:
+            end = i
+            blocs.append((start, end))
+            in_bloc = False
+    if in_bloc:
+        blocs.append((start, len(binary_vector)))
+    return blocs
 
 def getAiry(xstar, ystar, rot, D=8.36, f=9.8648):
     '''

@@ -5,10 +5,6 @@ from scipy.ndimage import gaussian_filter
 
 version = "0.2"
 
-'''
-    Need to do a big work here to be sure we don't do some shit.'
-'''
-
 def statsSmoothImage(image):
     '''
 
@@ -30,7 +26,7 @@ def statsSmoothImage(image):
         std value of smoothed image
 
     '''
-    image = image[~np.isnan(image)]
+    image = np.nan_to_num(image, nan=1e-10)
     smoothed = gaussian_filter(image, sigma=3.0)
     mean, median, std = sigma_clipped_stats(smoothed, sigma=3.0)
     return smoothed, mean, median, std
@@ -54,8 +50,8 @@ def statsImage(image):
         std value of image
 
     '''
-    image = image[~np.isnan(image)]
-    mean, median, std = sigma_clipped_stats(image, sigma=5.0)
+    image = np.nan_to_num(image, nan=1e-10)
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
     return mean, median, std
     
 def removeSources(image):

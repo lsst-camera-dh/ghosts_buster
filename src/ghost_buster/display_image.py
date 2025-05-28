@@ -4,7 +4,7 @@ import lsst.afw.display as afwDisplay
 from astropy.stats import sigma_clipped_stats
 from .sources_image import statsImage, extractSources, removeSources
 
-version = "0.1"
+version = "0.2"
 
 def displayImage(image, title=None, name=None):
     afwDisplay.setDefaultBackend('matplotlib') 
@@ -84,15 +84,12 @@ def displaySub(image, name=None, starpos=None):
         plt.savefig(name, bbox_inches='tight')
     plt.show()
 
-def displaySimu(hist, x, y, name=None):
-    
-    X, Y = np.meshgrid(x, y)
-    
+def displaySimu(hist, name=None):
+        
     fig, ax = plt.subplots(figsize=(8, 8))
-    
-    im = ax.pcolormesh(X, Y, hist, vmax=4e-2)
     ax.set_aspect("equal")
     ax.set_facecolor('black')
+    plt.imshow(hist, origin='lower', vmax=4e-2)
     plt.xticks([])
     plt.yticks([])
     
@@ -113,7 +110,7 @@ def displayClean(image, name=None):
         plt.savefig(name, bbox_inches='tight')
     plt.show()
 
-def displayFit(image, hist, x, y, clean, name=None):
+def displayFit(image, temp, clean, name=None):
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
     mean, median, std = sigma_clipped_stats(image, sigma=3.0)
@@ -125,44 +122,7 @@ def displayFit(image, hist, x, y, clean, name=None):
 
     ax = axes[1]
     ax.set_facecolor('black')
-
-    X, Y = np.meshgrid(x, y)
-
-    pcm = ax.pcolormesh(X, Y, hist, vmax=4e-2, shading='auto', norm='log')
-    
-    ax.set_aspect("equal")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title("Histogram 2D")
-
-    mean, median, std = sigma_clipped_stats(clean, sigma=3.0)
-    ax = axes[2]
-    ax.set_facecolor('white')
-    ax.imshow(clean, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
-    ax.set_title("Clean image")
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    plt.tight_layout()
-    
-    if name != None:
-        plt.savefig(name, bbox_inches='tight')
-    plt.show()
-
-def displayFit2(image, temp, clean, name=None):
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-
-    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
-    ax = axes[0]
-    ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
-    ax.set_title("Original image")
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    mean, median, std = sigma_clipped_stats(temp, sigma=3.0)
-    ax = axes[1]
-    ax.set_facecolor('black')
-    ax.imshow(temp, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.imshow(temp, origin='lower', vmax=4e-2)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
@@ -195,16 +155,16 @@ def displayRemoveSources(image, image_ghosts, name=None):
         plt.savefig(name, bbox_inches='tight')
     plt.show()
 
-def displayRemoveSourcesBoth(image, image_ghosts, name=None):
-    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+def displayRemoveSourcesAndArtefacts(image, artefacts, name=None):
     fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
     axes[0].imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
-    axes[0].set_title("Original image")
+    axes[0].set_title("Image without sources")
     axes[0].set_xticks([])
     axes[0].set_yticks([])
-    axes[1].imshow(image_ghosts, origin='lower', vmax=4e-2, norm='log')
-    axes[1].set_title("Image without brightness sources (potential ghosts)")
-    axes[1].set_facecolor('black')
+    mean, median, std = sigma_clipped_stats(artefacts, sigma=3.0)
+    axes[1].imshow(artefacts, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    axes[1].set_title("Artefacts")
     axes[1].set_xticks([])
     axes[1].set_yticks([])
     plt.tight_layout()

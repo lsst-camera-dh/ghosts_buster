@@ -2,6 +2,7 @@ import numpy as np
 import pylab as plt
 from astropy.stats import sigma_clipped_stats
 from scipy.optimize import curve_fit
+from scipy.stats import binned_statistic
 from iminuit import Minuit
 from .sources_image import removeSourcesBoth
 
@@ -140,11 +141,11 @@ def getNoise(image, x=[(1100, 1400)], y=[(100, 400)], sigma=10.0, name=None):
     if params[1] < params[4]:
         plt.plot(x_fit, y_fit[0], 'g-', label='Fit gaussienne Noise')
         plt.plot(x_fit, y_fit[1], 'r-', label='Fit gaussienne Ghosts')
-        result = params[1]
+        result = params[1], params[2]
     else:
         plt.plot(x_fit, y_fit[1], 'g-', label='Fit gaussienne Noise')
         plt.plot(x_fit, y_fit[0], 'r-', label='Fit gaussienne Ghosts')
-        result = params[4]
+        result = params[4], params[5]
         
     plt.plot(x_fit, sum_two_gaussian(x_fit, *params), 'b-', label='Fit1 + Fit2')
     plt.legend()
@@ -195,7 +196,7 @@ def fitGhosts(image, hist):
     image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
     hist = np.nan_to_num(hist, nan=0.0, posinf=0.0, neginf=0.0)
 
-    sigma_val = getNoise(image)[1]
+    noise, sigma_val = getNoise(image=image)
     sigma = np.ones_like(image) * sigma_val
 
     image_fit, hist_fit = removeSourcesBoth(image, hist)
@@ -204,7 +205,7 @@ def fitGhosts(image, hist):
     hist_flat = hist_fit.ravel()
     sigma_flat = sigma.ravel()
     
-    noise = getNoise(image=image)
+    
 
     def chi2(amp):
         model = amp * hist_flat + noise
@@ -278,3 +279,45 @@ def fitAiry(image, hist, temp):
     model_fit = m.values['AmpG'] * hist + m.values['AmpA'] * temp + noise
 
     return image - model_fit, m
+
+def profil_radial(image_sub, starpos, bins=50, bin_width=None):
+    '''
+
+    Parameters
+    ----------
+    image_sub : array
+        ImageFits.getArray() on only one CCD.
+    starpos : tuple
+        Position of the star in the CCD coordinates.
+    bins : int, optional
+        Number of radial bins to compute the profile (used if bin_width is None).
+        Default is 50.
+    bin_width : float, optional
+        Width of each radial bin. If provided, overrides the `bins` parameter.
+
+    Returns
+    -------
+    r_centers : array
+        Array of radial distances corresponding to the center of each bin.
+    profil : array
+        Mean pixel value in each radial bin, representing the radial profile.
+
+    '''
+    py, px = image_sub.shape
+    y_indices, x_indices = np.indices((py, px))
+
+    r = np.sqrt((x_indices - starpos[0])**2 + (y_indices - starpos[1])**2)
+    values = image_sub.flatten()
+    r = r.flatten()
+
+    if bin_width is not None:
+        r_max = r.max()
+        bins_edges = np.arange(0, r_max + bin_width, bin_width)
+    else:
+        bins_edges = bins
+
+    profil, edges, _ = binned_statistic(r, values, statistic='mean', bins=bins_edges)
+
+    r_centers = 0.5 * (edges[1:] + edges[:-1])
+
+    return r_centers, profil
