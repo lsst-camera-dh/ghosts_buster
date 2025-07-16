@@ -84,12 +84,17 @@ def displaySub(image, name=None, starpos=None):
         plt.savefig(name, bbox_inches='tight')
     plt.show()
 
-def displaySimu(hist, name=None):
+def displaySimu(hist, flux_update=False, name=None):
+
+    if flux_update == True:
+        vm = 4.0
+    else:
+        vm = 4e-2
         
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_aspect("equal")
     ax.set_facecolor('black')
-    plt.imshow(hist, origin='lower', vmax=4e-2)
+    plt.imshow(hist, origin='lower', vmax=vm)
     plt.xticks([])
     plt.yticks([])
     
@@ -110,7 +115,7 @@ def displayClean(image, name=None):
         plt.savefig(name, bbox_inches='tight')
     plt.show()
 
-def displayFit(image, temp, clean, name=None):
+def displayFit(image, temp, clean, flux_update=False, name=None):
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
     mean, median, std = sigma_clipped_stats(image, sigma=3.0)
@@ -122,7 +127,13 @@ def displayFit(image, temp, clean, name=None):
 
     ax = axes[1]
     ax.set_facecolor('black')
-    ax.imshow(temp, origin='lower', vmax=4e-2)
+
+    if flux_update == True:
+        vm = 4.0
+    else:
+        vm = 4e-2
+        
+    ax.imshow(temp, origin='lower', vmax=vm)
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
@@ -211,6 +222,94 @@ def displayCut(image, xpos, ypos, name=None):
 
     plt.tight_layout()
     
+    if name is not None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+
+def displayCutTest(image, xpos, ypos, width=5, name=None):
+    fig = plt.figure(figsize=(16, 6))
+    image = np.nan_to_num(image, nan=0.0, posinf=0.0, neginf=0.0)
+    
+    # Coupe verticale (moyenne sur les colonnes autour de xpos)
+    plt.subplot(1, 2, 1)
+    x_start = max(0, int(xpos) - width)
+    x_end = min(image.shape[1], int(xpos) + width + 1)
+    x_profile = np.mean(image[:, x_start:x_end], axis=1)
+    x_idx = np.arange(len(x_profile))
+    plt.plot(x_idx, x_profile, color='blue')
+    plt.xlabel("Pixels along y axis")
+    plt.ylabel("Mean bin value")
+    plt.ylim(np.min(x_profile)-50, np.max(x_profile)+50)
+    plt.title(f"Mean cut over x ∈ [{x_start}, {x_end-1}]")
+
+    # Coupe horizontale (moyenne sur les lignes autour de ypos)
+    plt.subplot(1, 2, 2)
+    y_start = max(0, int(ypos) - width)
+    y_end = min(image.shape[0], int(ypos) + width + 1)
+    y_profile = np.mean(image[y_start:y_end, :], axis=0)
+    y_idx = np.arange(len(y_profile))
+    plt.plot(y_idx, y_profile, color='green')
+    plt.xlabel("Pixels along x axis")
+    plt.ylabel("Mean bin value")
+    plt.ylim(np.min(y_profile)-50, np.max(y_profile)+50)
+    plt.title(f"Mean cut over y ∈ [{y_start}, {y_end-1}]")
+
+    plt.tight_layout()
+    
+    if name is not None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+
+def displayFitTest(image, temp, clean, flux_update=False, name=None):
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+
+    # Première image : image originale
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+    ax = axes[0]
+    im0 = ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Original image")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    fig.colorbar(im0, ax=ax, fraction=0.046, pad=0.04)
+
+    # Deuxième image : template
+    ax = axes[1]
+    ax.set_facecolor('black')
+    vm = 4.0 if flux_update else 4e-2
+    im1 = ax.imshow(temp, origin='lower', vmax=vm)
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_title("Template")
+    fig.colorbar(im1, ax=ax, fraction=0.046, pad=0.04)
+
+    # Troisième image : image nettoyée
+    mean, median, std = sigma_clipped_stats(clean, sigma=3.0)
+    ax = axes[2]
+    ax.set_facecolor('white')
+    im2 = ax.imshow(clean, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Clean image")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    fig.colorbar(im2, ax=ax, fraction=0.046, pad=0.04)
+
+    plt.tight_layout()
+    if name is not None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+
+def displayRealTest(image, name=None):
+    mean, median, std = sigma_clipped_stats(image, sigma=3.0)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 8))
+    
+    im = ax.imshow(image, cmap='gray', origin='lower', vmin=median, vmax=median + 3*std)
+    ax.set_title("Original image")
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    # Ajout de la colorbar
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
     if name is not None:
         plt.savefig(name, bbox_inches='tight')
     plt.show()

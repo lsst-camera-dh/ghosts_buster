@@ -1,9 +1,10 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
 
 # SLURM options:
 
-#SBATCH --job-name=fitrotationbatoid    # Nom du job
-#SBATCH --output=fitrotationbatoid_%j.log   # Standard output et error log
+#SBATCH --job-name=fittransmission    # Nom du job
+#SBATCH --output=fittransmission_%j.log   # Standard output et error log
 
 #SBATCH --partition=htc               # Choix de partition (htc par défaut)
 
@@ -22,4 +23,4 @@ source /cvmfs/sw.lsst.eu/almalinux-x86_64/lsst_distrib/w_2025_18/loadLSST.bash
 setup lsst_distrib
 
 # Lancer le script Python
-python3 $HOME/lsst/scripts/fitrot.py
+python3 $HOME/lsst/scripts/fittransmission.py

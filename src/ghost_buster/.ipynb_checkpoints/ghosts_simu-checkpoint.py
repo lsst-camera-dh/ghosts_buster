@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import batoid
 import math
+import os
 from scipy.special import j1
 from scipy.ndimage import rotate
 from scipy.signal import fftconvolve
@@ -148,39 +149,31 @@ def getTransmissionRate(band, wavelength=None):
     
     if wavelength == None:
         bands = {"u": 355.0, "g": 475.0, "r": 622.0, "i": 763.0, "z": 905.0, "y": 1000.0}
-        path = "../../data/"
-        files = [path + "lens1" + ".dat",
-                 path + "lens2" + ".dat",
-                 path + "lens3" + ".dat",
-                 path + "filter_" + band + ".dat",
-                 path + "detector" + ".dat"]
-        
-        for i in range(5):
-            df = pd.read_csv(files[i], comment="#", sep=r'\s+', names=["wavelength", "throughput"])
-            
-            wavelengths = df["wavelength"].values
-            throughput = df["throughput"].values
-            
-            wavelength = bands[band]
-            index = np.argmin(np.abs(wavelengths - wavelength))
-            t.append(throughput[index])
+        wavelength = bands[band]
+
+    base_path = os.path.dirname(__file__)
+    data_path = os.path.abspath(os.path.join(base_path, '..', '..', 'data'))
     
-    else:
-        path = "../../data/"
-        files = [path + "lens1" + ".dat",
-                 path + "lens2" + ".dat",
-                 path + "lens3" + ".dat",
-                 path + "filter_" + band + ".dat",
-                 path + "detector" + ".dat"]
+    filenames = [
+        "lens1.dat",
+        "lens2.dat",
+        "lens3.dat",
+        f"filter_{band}.dat",
+        "detector.dat"
+    ]
+    files = [os.path.join(data_path, name) for name in filenames]
+
+    for file in files:
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"Missing file: {file}")
         
-        for i in range(len(files)):
-            df = pd.read_csv(files[i], comment="#", sep=r'\s+', names=["wavelength", "throughput"])
+        df = pd.read_csv(file, comment="#", sep=r'\s+', names=["wavelength", "throughput"])
             
-            wavelengths = df["wavelength"].values
-            throughput = df["throughput"].values
+        wavelengths = df["wavelength"].values
+        throughput = df["throughput"].values
             
-            index = np.argmin(np.abs(wavelengths - wavelength))
-            t.append(throughput[index])
+        index = np.argmin(np.abs(wavelengths - wavelength))
+        t.append(throughput[index])
 
     return t, wavelength
 
@@ -413,7 +406,7 @@ def groupData(x, y, flux):
     flux = np.concatenate([iflux for iflux in flux])
     return x, y, flux
 
-def getSimuImage(px, py, x, y, flux, binning):
+def getSimuImage(px, py, x, y, flux, binning, pixelsize=1e-5):
     '''
     
     Parameters
@@ -438,7 +431,7 @@ def getSimuImage(px, py, x, y, flux, binning):
     '''
     # On suppose que x_prime, y_prime et flux sont des arrays 1D avec les positions et le flux associé
 
-    scale = binning*1e-5
+    scale = binning*pixelsize
     X, Y = px*scale, py*scale
 
     extent = [-X/2.0, X/2.0, -Y/2.0, Y/2.0]
@@ -455,7 +448,7 @@ def getSimuImage(px, py, x, y, flux, binning):
 
     return H
 
-def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=None):
+def getGhosts(telescope, init_simu, wavelength, nbghost=None, ghostmap=False, update_flux=False, name=None, debug=False):
     '''
 
     Parameters
@@ -483,16 +476,16 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
         x, y and the flux of each rays regroup.
 
     '''
-    xsep, ysep, flux, path = batoidCalcul(telescope, init_simu, wavelength)
+    xsep, ysep, flux, path = batoidCalcul(telescope, init_simu, wavelength, debug)
     nghost = len(xsep)
     ref = ['L1_entrance', 'L1_exit', 'L2_entrance', 'L2_exit', 'Filter_entrance', 'Filter_exit', 'L3_entrance', 'L3_exit', 'Detector']
     paths = []
 
-    for i in range(nghost):
-        paths.append([ipath for ipath in path[i] if ipath in ref])
-        
     if nghost == 0:
         return [], [], []
+        
+    for i in range(nghost):
+        paths.append([ipath for ipath in path[i] if ipath in ref])
     
     idx_keep = []
     flux_update = []
@@ -515,38 +508,50 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
     
         mask = counts > 0
         individual_areas = [hex_area for _ in offsets[mask]]
-        flux_update.append(flux[i][0]/(len(individual_areas)*hex_area))
-        print(f"Flux/m2 for ghost {i+1} : {flux_update[i]}")
+        flux_update.append(flux[i]/(len(individual_areas)*hex_area))
+        
+        if debug == True:
+            print(f"Flux/m2 for ghost {i+1} : {flux_update[i][0]}")
     
     plt.close()
 
     path = paths.copy()
     x, y, f, paths = [], [], [], []
-    
-    nbghost += 1
+
+    if nbghost == None:
+        nbghost = nghost
+
+    else:
+        nbghost += 1
     
     idx_in_cercle = []
     
-    for i in range(len(flux_update)):
+    for i in range(len(xsep)):
         r = np.sqrt(np.array(xsep[i])**2 + np.array(ysep[i])**2)
         if np.any(r <= 0.32/5.0):
             idx_in_cercle.append(i)
     
     idx_sorted = sorted(
         idx_in_cercle,
-        key=lambda i: flux_update[i],
+        key=lambda i: flux_update[i][0],
         reverse=True
         )
     
     idx_keep = idx_sorted[:nbghost]
 
+    flat_flux = [f[0] for f in flux_update]  # si tous ont au moins un élément
+    max_flux = max(flat_flux)
+
     for i in idx_keep:
-        if flux_update[i]==np.max(flux_update):
+        if flux_update[i][0]==max_flux:
             continue
             
         x.append([ix for ix in xsep[i]])
         y.append([iy for iy in ysep[i]])
-        f.append([iflux for iflux in flux[i]])
+        if update_flux==False:
+            f.append([iflux for iflux in flux[i]])
+        else:
+            f.append([iflux for iflux in flux_update[i]])
         paths.append([ipath for ipath in path[i]])
 
     if ghostmap == True:
@@ -586,7 +591,10 @@ def getGhosts(telescope, init_simu, wavelength, nbghost=5, ghostmap=False, name=
             individual_areas = [hex_area for _ in offsets[mask]]
             
             axes[i].set_xlabel(f"{np.array(path[idx_keep[i]])}", fontsize=8, color="gray", labelpad=5)
-            axes[i].set_title(f"Ghost {i+1}, Flux : {flux[idx_keep[i]][0]/(len(individual_areas)*hex_area):.5f}", fontsize=10)
+            if update_flux == True:
+                axes[i].set_title(f"Ghost {i+1}, Flux : {flux[idx_keep[i]][0]/(len(individual_areas)*hex_area):.5f}", fontsize=10)
+            else:
+                axes[i].set_title(f"Ghost {i+1}, Flux : {flux[idx_keep[i]][0]:.5f}", fontsize=10)
             axes[i].axis("equal")
             
         for i in range(len(idx_keep), len(axes)):

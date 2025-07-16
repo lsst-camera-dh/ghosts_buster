@@ -38,6 +38,43 @@ def sum_two_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
     gauss2 = A2 * np.exp(-0.5 * ((x - mu2) / sigma2)**2)
     return gauss1 + gauss2
 
+def sum_three_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2, A3, mu3, sigma3):
+    '''
+
+    Parameters
+    ----------
+    x : array
+        Array of x coordinates.
+    A1 : float
+        Amplitude of the first gaussian.
+    mu1 : float
+        Mean of the first gaussian.
+    sigma1 : float
+        Standard deviation of the first gaussian.
+    A2 : float
+        Amplitude of the second gaussian.
+    mu2 : float
+        Mean of the second gaussian.
+    sigma2 : float
+        Standard deviation of the second gaussian.
+    A3 : float
+        Amplitude of the third gaussian.
+    mu3 : float
+        Mean of the third gaussian.
+    sigma3 : float
+        Standard deviation of the third gaussian.
+
+    Returns
+    -------
+    array
+        Sum of the three gaussian.
+
+    '''
+    gauss1 = A1 * np.exp(-0.5 * ((x - mu1) / sigma1)**2)
+    gauss2 = A2 * np.exp(-0.5 * ((x - mu2) / sigma2)**2)
+    gauss3 = A3 * np.exp(-0.5 * ((x - mu3) / sigma3)**2)
+    return gauss1 + gauss2 + gauss3
+
 def two_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
     '''
 
@@ -67,6 +104,43 @@ def two_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
     gauss1 = A1 * np.exp(-0.5 * ((x - mu1) / sigma1)**2)
     gauss2 = A2 * np.exp(-0.5 * ((x - mu2) / sigma2)**2)
     return gauss1, gauss2
+
+def three_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2, A3, mu3, sigma3):
+    '''
+
+    Parameters
+    ----------
+    x : array
+        Array of x coordinates.
+    A1 : float
+        Amplitude of the first gaussian.
+    mu1 : float
+        Mean of the first gaussian.
+    sigma1 : float
+        Standard deviation of the first gaussian.
+    A2 : float
+        Amplitude of the second gaussian.
+    mu2 : float
+        Mean of the second gaussian.
+    sigma2 : float
+        Standard deviation of the second gaussian.
+    A3 : float
+        Amplitude of the third gaussian.
+    mu3 : float
+        Mean of the third gaussian.
+    sigma3 : float
+        Standard deviation of the third gaussian.
+
+    Returns
+    -------
+    array, array
+        gaussian_1, gaussain_2, gaussian_3.
+
+    '''
+    gauss1 = A1 * np.exp(-0.5 * ((x - mu1) / sigma1)**2)
+    gauss2 = A2 * np.exp(-0.5 * ((x - mu2) / sigma2)**2)
+    gauss3 = A3 * np.exp(-0.5 * ((x - mu3) / sigma3)**2)
+    return gauss1, gauss2, gauss3
 
 def getNoise(image, bounds=None, sigma=10.0, name=None):
     '''
@@ -147,6 +221,109 @@ def getNoise(image, bounds=None, sigma=10.0, name=None):
         result = params[4], params[5]
         
     plt.plot(x_fit, sum_two_gaussian(x_fit, *params), 'b-', label='Fit1 + Fit2')
+    plt.legend()
+    
+    if name != None:
+        plt.savefig(name, bbox_inches='tight')
+    plt.show()
+    
+    return result
+
+def getNoiseAndDiffusion(image, sources=False, bounds=None, sigma=20.0, name=None):
+    '''
+
+    Parameters
+    ----------
+    image : array
+        ImageFits.getArray().
+    bounds : tuple, optionnal
+        Bounds interval as (xmin, ymin, xmax, ymax). The default is None
+    sigma : float, optional
+        Number of sigma for the selection of data. The default is 10.0.
+    name : string, optional
+        Will save the plot in 'name.png' if it is different of None.
+        The default is None.
+
+    Returns
+    -------
+    result : float
+        Mean value of the noise.
+
+    '''
+
+    if bounds != None:
+        sub_image = image[bounds[0]:bounds[3], bounds[2]:bounds[4]].ravel()
+    else:
+        if sources == False:
+            sub_image = removeSources(image, np.nan).ravel()
+        else:
+            sub_image = image.ravel()
+            
+    sub_image = sub_image[~np.isnan(sub_image)]
+    
+    mean, median, std = sigma_clipped_stats(sub_image, sigma=3.0)
+    
+    mask = (sub_image > mean - sigma*std) & (sub_image < mean + sigma*std)
+    x_hist = sub_image[mask]
+
+    hist_vals, bin_edges = np.histogram(x_hist, bins=100, density=True)
+    bin_centers = 0.5 * (bin_edges[1:] + bin_edges[:-1])
+
+    p0 = [0.1, 950.0, 5, 0.01, 960.0, 7, 0.001, 1100.0, 10]  # A1, mu1, sigma1, A2, mu2, sigma2, A3, mu3, sigma3
+
+    params, cov = curve_fit(sum_three_gaussian, bin_centers, hist_vals, p0=p0)
+
+    if params[1] < params[4]:
+        print("\n--- Paramètres du fit double gaussienne ---")
+        print("Gaussienne 1 (noise) :")
+        print(f"  Amplitude   = {params[0]:.3f}")
+        print(f"  Moyenne     = {params[1]:.3f}")
+        print(f"  Sigma       = {params[2]:.3f}")
+        
+        print("\nGaussienne 2 (ghosts) :")
+        print(f"  Amplitude   = {params[3]:.3f}")
+        print(f"  Moyenne     = {params[4]:.3f}")
+        print(f"  Sigma       = {params[5]:.3f}")
+
+        print("\nGaussienne 3 (diffusion) :")
+        print(f"  Amplitude   = {params[6]:.3f}")
+        print(f"  Moyenne     = {params[7]:.3f}")
+        print(f"  Sigma       = {params[8]:.3f}")
+
+    else:
+        print("\n--- Paramètres du fit double gaussienne ---")
+        print("Gaussienne 1 (noise) :")
+        print(f"  Amplitude   = {params[3]:.3f}")
+        print(f"  Moyenne     = {params[4]:.3f}")
+        print(f"  Sigma       = {params[5]:.3f}")
+        
+        print("\nGaussienne 2 (ghosts) :")
+        print(f"  Amplitude   = {params[0]:.3f}")
+        print(f"  Moyenne     = {params[1]:.3f}")
+        print(f"  Sigma       = {params[2]:.3f}")
+
+        print("\nGaussienne 3 (diffusion) :")
+        print(f"  Amplitude   = {params[6]:.3f}")
+        print(f"  Moyenne     = {params[7]:.3f}")
+        print(f"  Sigma       = {params[8]:.3f}")
+
+    x_fit = np.linspace(bin_centers.min(), bin_centers.max(), 1000)
+    y_fit = three_gaussian(x_fit, *params)
+    
+    plt.hist(x_hist, bins=100, density=True, alpha=0.6, label='Histogramme')
+
+    if params[1] < params[4]:
+        plt.plot(x_fit, y_fit[0], 'g-', label='Fit gaussienne Noise')
+        plt.plot(x_fit, y_fit[1], 'r-', label='Fit gaussienne Ghosts')
+        plt.plot(x_fit, y_fit[2], 'c-', label='Fit gaussienne Diffusion')
+        result = params[1], params[2]
+    else:
+        plt.plot(x_fit, y_fit[1], 'g-', label='Fit gaussienne Noise')
+        plt.plot(x_fit, y_fit[0], 'r-', label='Fit gaussienne Ghosts')
+        plt.plot(x_fit, y_fit[2], 'c-', label='Fit gaussienne Diffusion')
+        result = params[4], params[5]
+        
+    plt.plot(x_fit, sum_three_gaussian(x_fit, *params), 'b-', label='Fit1 + Fit2 + Fit3')
     plt.legend()
     
     if name != None:

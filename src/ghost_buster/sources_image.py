@@ -73,7 +73,7 @@ def removeSources(image, value=0.0):
 
     '''
     smoothed, mean, median, std = statsSmoothImage(image)
-    threshold = median + 3.0 * std
+    threshold = median + 15.0 * std
     segm = detect_sources(smoothed, threshold=threshold, npixels=5)
     source_mask = segm.make_source_mask()
     ghosts_only = np.where(source_mask, value, image)
@@ -96,7 +96,7 @@ def removeSourcesBoth(image, hist):
 
     '''
     smoothed, mean, median, std = statsSmoothImage(image)
-    threshold = median + 5.0 * std
+    threshold = median + 15.0 * std
     segm = detect_sources(smoothed, threshold=threshold, npixels=5)
     source_mask = segm.make_source_mask()
     image = np.where(source_mask, 0.0, image)
@@ -118,7 +118,7 @@ def extractSources(image):
         Bin's values
     '''
     smoothed, mean, median, std = statsSmoothImage(image)
-    threshold = median + 3.0 * std
+    threshold = median + 5.0 * std
     segm = detect_sources(smoothed, threshold=threshold, npixels=5)
     source_mask = segm.make_source_mask()
     sources_only = np.where(source_mask, image, 0.0)
@@ -140,7 +140,7 @@ def getCatalog(image):
 
     '''
     smoothed, mean, median, std = statsSmoothImage(image)
-    threshold = median + 8.0 * std
-    segm = detect_sources(smoothed, threshold=threshold, npixels=3)
+    threshold = median + 5.0 * std
+    segm = detect_sources(smoothed, threshold=threshold, npixels=200)
     catalog = SourceCatalog(image, segm)
     return catalog
