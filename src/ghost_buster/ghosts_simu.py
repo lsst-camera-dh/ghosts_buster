@@ -657,6 +657,14 @@ def _blocs_detector(binary_vector):
         blocs.append((start, len(binary_vector)))
     return blocs
 
+
+
+##################################################
+#          The work below is not finish          #
+##################################################
+
+
+
 def getAiry(xstar, ystar, rot, D=8.36, f=9.8648):
     '''
 
