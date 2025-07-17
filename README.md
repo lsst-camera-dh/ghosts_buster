@@ -1,3 +1,11 @@
 # lsst_ghost_buster
-A package with notebook, script and other differents things developpe to know more about ghost images. This work is developpe for the LSST collaboration.
+Tool based on Batoid (ray tracing simulation) for the mitigation of ghosts in LSSTComCam.
 
+## People
+
+* [Dimitri Buffat](https://github.com/dbuffat) (Master 2/Physics (Cosmo)/Univ Lyon 1, Intern supervised by [J. Bregeon](https://github.com/bregeon)
+
+
+## License, Contributing etc
+
+The code in this repository is available for re-use under the GPL v3 license.
