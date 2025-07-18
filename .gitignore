@@ -37,5 +37,4 @@ logs/
 .out
 
 # Embargo
-notebooks/comcam_ghosts/
-notebooks/Embargo/
+*.fits
