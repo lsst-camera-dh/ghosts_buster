@@ -6,7 +6,7 @@ Tool based on Batoid (ray tracing simulation) for the mitigation of ghosts in LS
 ## People
 
 * [Dimitri Buffat](https://github.com/dbuffat) (Master 2/Physics (Cosmo)/Univ Lyon 1, Intern supervised by [J. Bregeon](https://github.com/bregeon)
-
+  * Original software developed at https://github.com/dbuffat/lsst_ghost_buster
 
 ## License, Contributing etc
 
