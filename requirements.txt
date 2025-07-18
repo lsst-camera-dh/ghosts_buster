@@ -1,5 +1,13 @@
 batoid >= 0.8.0
 numpy
+scipy
 pandas
+seaborn
+iminuit
 pyarrow
 matplotlib
+ipywidgets
+ipyvolume
+ipython-genutils
+photutils
+jupyterlab
